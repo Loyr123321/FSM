@@ -1,0 +1,22 @@
+﻿<MudDialog DefaultFocus="DefaultFocus.LastChild">
+    <DialogActions>
+
+        <input class="form_input_plnd" @bind="reason" style="width:100%;" placeholder="" />
+        <MudSwitch @bind-Checked="@isRatingDowngrade" Color="Color.Secondary" />
+
+        <MudButton Color="Color.Primary" OnClick="Cancel">Отмена</MudButton>
+        <MudButton Color="Color.Primary" OnClick="Submit">Да</MudButton>
+    </DialogActions>
+</MudDialog>
+@code
+{
+    [CascadingParameter] MudDialogInstance MudDialog { get; set; }
+    //public string reason = string.Empty;
+    //public bool isRatingDowngrade = false;
+
+    [Parameter] public string reason { get; set; } = string.Empty;
+    [Parameter] public bool isRatingDowngrade { get; set; } = false;
+
+    void Submit() => MudDialog.Close(DialogResult.Ok(true));
+    void Cancel() => MudDialog.Cancel();
+}

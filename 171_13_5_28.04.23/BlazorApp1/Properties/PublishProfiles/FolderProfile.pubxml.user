@@ -1,0 +1,11 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<!--
+https://go.microsoft.com/fwlink/?LinkID=208121.
+-->
+<Project>
+  <PropertyGroup>
+    <_PublishTargetUrl>C:\Users\frolov.vvi\Desktop\backups\112\BlazorApp1\bin\Release\net6.0\publish\</_PublishTargetUrl>
+    <History>True|2022-11-30T12:38:01.7405967Z;True|2022-11-30T15:34:57.1822676+03:00;True|2022-11-30T15:17:51.6313157+03:00;True|2022-11-30T15:13:23.0933874+03:00;True|2022-11-30T14:24:21.4945140+03:00;True|2022-11-30T13:41:00.6034721+03:00;True|2022-11-29T09:59:37.4389085+03:00;True|2022-11-29T08:28:00.0604318+03:00;True|2022-11-29T08:19:38.7474748+03:00;True|2022-11-29T08:01:58.3767599+03:00;True|2022-10-05T10:50:26.3447940+03:00;</History>
+    <LastFailureDetails />
+  </PropertyGroup>
+</Project>

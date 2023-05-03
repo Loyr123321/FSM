@@ -1,0 +1,942 @@
+﻿ @page "/employee"
+@attribute [Authorize(Roles = "Admin,Dispatcher")]
+@*@attribute [Authorize(Policy = "RequireRole")]*@
+@using BlazorApp1.Components;
+@using BlazorApp1.Models
+@using BlazorApp1.Models.Validation;
+@using BlazorApp1.Services;
+@using BlazorApp1.Views;
+@using Radzen;
+
+@inject ILoggerFactory LoggerFactory
+@inject Services.EmployeeService employeeService
+@inject Services.SkillService skillService
+@inject Services.OrderTypeService orderTypeService
+@inject RegionService regionService
+@inject Services.DaDataService dadataService
+@inject NavigationManager NavigationManager
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+
+@inject Services.RabbitMQService rabbit
+<link rel="stylesheet" href="_content/Radzen.Blazor/css/material-base.css">
+
+<input @ref="anchorTop" class="anchor_link" />
+
+@if (employee != null)
+{
+    <div class="row">
+
+        <div class="col-12 col-sm-10 d-sm-block col-xxl-6">
+            <div class="row p-2 my_form_header">
+                <div class="col-6">
+                    <h4>
+                        @if (string.IsNullOrWhiteSpace(id))
+                        {
+                            <h1>Новый мастер</h1>
+                        }
+                        else
+                        {
+                            <h1>Мастер</h1>
+                        }
+                    </h4>
+                </div>
+                <div class="col-6" @onclick="@(e=>CloseWindow())">
+                    <div class="x_icon"></div>
+                </div>
+            </div>
+        </div>
+        <div class="w-100" />
+
+        <div class="col-12 col-sm-10 d-sm-block col-xxl-6 my_form">
+
+            <EditForm Model="@employee" OnValidSubmit="@Save">
+
+                <div class="row">
+                    @if (file != null)
+                    {
+                        @if (file.browserFile != null) //Добавлен новый
+                        {
+                            <div class="col-12">
+                                <div class="row">
+                                    <div class="col-4 input_t01text inp_fp">(@file.browserFile.Size байт)</div>
+                                    <div class="col-6 input_t01text">@file.browserFile.Name</div>
+                                    <div class="col-2 input_t01text"><div class="x_icon_mini" @onclick="(e=> DeleteFile())"></div></div>
+                                </div>
+                            </div>
+                        }
+                        else if (file.TFile != null) //Прочитан из бд
+                        {
+                            <div class="col-12">
+                                <div class="row">
+                                    <div class="col-4 input_t01text inp_fp">(@file.TFile.Size байт)</div>
+                                    <div class="col-6 input_t01text"><a href="@file.TFile.FullPath">@file.TFile.InitialName</a></div>
+                                    <div class="col-2 input_t01text"><div class="x_icon_mini" @onclick="(e=> DeleteFile())"></div></div>
+                                </div>
+                            </div>
+                        }
+                    }
+                    <div class="col-4" style="min-width: 150px;">
+                        <InputFile id="@employee.Id" OnChange="(e => SetUploadedFileNames(e, employee.Id))" hidden accept="image/*" />
+                        <MudButton HtmlTag="label" Class="btn_field_download" Variant="MudBlazor.Variant.Filled" for="@employee.Id">
+                            Загрузить фото
+                        </MudButton>
+                    </div>
+                </div>
+
+
+                @if (!string.IsNullOrWhiteSpace(employee.Login))
+                {
+                    <div class="row">
+                        <div class="col-md-12">
+                            <label>Логин:</label>
+                            <InputText @bind-Value=employee.Login class="form-control form_input_plnd" style="width:100%;" />
+                            <ValidationMessage For="() => employee.Login" />
+                        </div>
+                        <div class="col-md-12">
+                            <div class="get_client_info info_fc_right" @onclick="(e=> OpenDialogResetPassword(employee.Id, employee.GetFullName()) )">
+                                Сбросить пароль
+                            </div>
+                        </div>
+                    </div>
+                }
+                @if (!string.IsNullOrWhiteSpace(password))
+                {
+                    <div class="row" style="background-color: #ff8c9d;">
+                        <div class="col-md-12">
+                            <div>Пароль Мастера @password</div>
+                        </div>
+                    </div>
+                }
+
+                <div class="row">
+                    <div class="col-md-12">
+                        <div>Рейтинг: @employee.GetRating()</div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-12">
+                        <label>Фамилия:</label>
+                        <InputText @bind-Value=employee.LastName class="form-control form_input_plnd" style="width:100%;" />
+                        <ValidationMessage For="() => employee.LastName" />
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-12">
+                        <label>Имя:</label>
+                        <InputText @bind-Value=employee.FirstName class="form-control form_input_plnd" style="width:100%;" />
+                        <ValidationMessage For="() => employee.FirstName" />
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-12">
+                        <label>Отчество:</label>
+                        <InputText @bind-Value=employee.MiddleName class="form-control form_input_plnd" style="width:100%;" />
+                        <ValidationMessage For="() => employee.MiddleName" />
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-12">
+                        <label>Телефон:</label>
+                        <RadzenMask Mask="+* (***) ***-****"
+                                CharacterPattern="[0-9]"
+                                Placeholder="+7 (000) 000-0000"
+                                @bind-Value=@employee.Phone
+                                Style="width: 100%;"
+                                class="form_input_plnd" />
+
+                        <ValidationMessage For="() => employee.Phone" />
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-12">
+                        <label>Почта:</label>
+                        <InputText @bind-Value=employee.Mail class="form-control form_input_plnd" style="width:100%;" />
+                        <ValidationMessage For="() => employee.Mail" />
+                    </div>
+                </div>
+
+                <div class="row" style="margin-top: 10px;">
+                    <div class="col-md-12">
+                        <h5>Отправить инструкцию для активации:</h5>
+                        <MudForm>
+                            <MudRadioGroup @bind-SelectedOption="@employee.HowToNotify">
+                                <MudRadio Option="@(EmployeeHowToNotify.Phone.ToString())" Color="Color.Primary">SMS-сообщением</MudRadio>
+                                <br />
+                                <MudRadio Option="@(EmployeeHowToNotify.Mail.ToString())" Color="Color.Primary">По электронной почте</MudRadio>
+                            </MudRadioGroup>
+                        </MudForm>
+                    </div>
+                </div>
+
+                <div class="row" style="margin-top: 10px;">
+                    <div class="col-12">
+                        <h5>Специализации:</h5>
+                        <RadzenDropDown Multiple="true"
+                                Chips="false"
+                                MaxSelectedLabels="0"
+                                AllowClear="true"
+                                AllowFiltering="true"
+                                FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                                Data=@orderTypes
+                                @bind-Value=@selectedOrderTypes
+                                SelectedItemsText="специализаций выбрано"
+                                Change=@(args => OnChangeSkillsDisabled(args, "")) class="w-100 data_input_creating" />
+
+
+                    @if (selectedOrderTypes != null && selectedOrderTypes.ToList().Count > 0)
+                    {
+                        <div class="myflexwrap">
+                            @for (int i = 0; i < selectedOrderTypes.Count(); i++)
+                            {
+                                <span class="skill">@selectedOrderTypes.ToList()[i].TypeName</span>
+                            }
+                        </div>
+                    }
+                    </div>
+                </div>
+
+                <div class="row" style="margin-top: 10px;">
+                    <div class="col-md-12">
+                        <h5>Навыки:</h5>
+                        <RadzenDropDown Multiple="true"
+                                    Chips="false"
+                                    MaxSelectedLabels="0"
+                                    AllowClear="true"
+                                    AllowFiltering="true"
+                                    FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                                    Data=@skills
+                                    @bind-Value=@selectedSkills
+                                    SelectedItemsText="навыков выбрано"
+                                    Change=@(args => OnChangeSkillsDisabled(args, "")) class="w-100 data_input_creating" />
+
+                        @if (selectedSkills != null && selectedSkills.ToList().Count > 0)
+                        {
+                            <div class="myflexwrap">
+                                @for (int i = 0; i < selectedSkills.Count(); i++)
+                                {
+                                    if (isHideAllSkills == true && i == 5)
+                                    {
+                                        <span class="skill_hide_show" @onclick="(()=>ShowNotification())">...</span>
+                                        break;
+                                    }
+                                    <span class="skill">@selectedSkills.ToList()[i].SkillName</span>
+                                }
+                                @if (isHideAllSkills == false)
+                                {
+                                    <span class="skill_hide_show" @onclick="(()=>ShowNotification())">Скрыть</span>
+                                }
+                            </div>
+                        }
+                    </div>
+                </div>
+
+                <div class="row" style="margin-top: 10px;">
+                    <div class="col-md-12">
+                        <h5>Договоренность:</h5>
+                            @*<ul class="mytabmenu">
+                        <li class="@(employee.IsWorksUnderContract == false ? "dogovor_tab_check_left dogovor_tab_check_active" : "dogovor_tab_check_left")" @onclick="(e=> SetCurrentTabContracted(false)) ">Работает за наличные</li>
+                        <li class="@(employee.IsWorksUnderContract == true ? "dogovor_tab_check_right dogovor_tab_check_active" : "dogovor_tab_check_right")" @onclick="(e=> SetCurrentTabContracted(true))">Работает по договору</li>
+                        </ul>*@
+                        <RadzenRadioButtonList @bind-Value=@employee.WorkMode TValue="string" Orientation=Radzen.Orientation.Vertical>
+                            <Items>
+                                <RadzenRadioButtonListItem Text="Работает за наличные" Value="EmployeeWorkMode.ForCash.ToString()" TValue="string" @onclick="(e=> SetWorkMode(EmployeeWorkMode.ForCash.ToString())) " />
+                                <RadzenRadioButtonListItem Text="Работает по договору" Value="EmployeeWorkMode.ByContract.ToString()" TValue="string" @onclick="(e=> SetWorkMode(EmployeeWorkMode.ByContract.ToString()))" />
+                                <RadzenRadioButtonListItem Text="Сотрудник компании" Value="EmployeeWorkMode.CompanyMember.ToString()" TValue="string" @onclick="(e=> SetWorkMode(EmployeeWorkMode.CompanyMember.ToString()))" />
+                            </Items>
+                        </RadzenRadioButtonList>
+                    </div>
+                </div>
+
+                @if (employee != null && employee.Contract != null && employee.WorkMode != null && employee.WorkMode == EmployeeWorkMode.ByContract.ToString())
+                {
+                    @* <div class="col-10 d-none d-sm-block col-xxl-6 my_form fix_width02">*@
+                    <div class="employee_contract">
+                        <div class="row">
+                            <ul class="mytabmenu">
+                                <li class="@(currentTab == (int)ContractType.Physical ? "mytab_button left_bradius mytab_active_button" : "mytab_button left_bradius")" @onclick="(e => setContractType(ContractType.Physical))">ФЛ</li>
+                                <li class="@(currentTab == (int)ContractType.IndividualEntrepreneur ? "mytab_button mytab_active_button" : "mytab_button")" @onclick="(e => setContractType(ContractType.IndividualEntrepreneur))">ИП</li>
+                                <li class="@(currentTab == (int)ContractType.LimitedLiabilityCompany ? "mytab_button right_bradius mytab_active_button" : "mytab_button right_bradius")" @onclick="(e => setContractType(ContractType.LimitedLiabilityCompany))">ООО</li>
+                            </ul>
+                        </div>
+                        @if (currentTab == (int)ContractType.Physical || currentTab == (int)ContractType.IndividualEntrepreneur)
+                        {
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <label>Фамилия:</label>
+                                    <input class="form_input_plnd" @bind="employee.Contract.LastName" style="width:100%;" placeholder="" />
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <label>Имя:</label>
+                                    <input class="form_input_plnd" @bind="employee.Contract.FirstName" style="width:100%;" placeholder="" />
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <label>Отчество:</label>
+                                    <input class="form_input_plnd" @bind="employee.Contract.MiddleName" style="width:100%;" placeholder="" />
+                                </div>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <label>Название организации:</label>
+                                    <input class="form_input_plnd" @bind="employee.Contract.OrganizationName" style="width:100%;" placeholder="" />
+                                </div>
+                            </div>
+                        }
+                    </div>
+                    @*</div>*@
+                }
+
+                <div style="margin-bottom:10px;">
+                    <h5>Адрес проживания:</h5>
+                    <AddressComponent address="@address" />
+                </div>
+
+                <div style="margin-bottom:10px;">
+                    <h5>Регионы работы:</h5>
+                    <div class="regions">
+                        <div class="row">
+                            <div class="col-md-12">
+                                <MudGrid>
+                                    <MudItem xs="12">
+                                        <MudAutocomplete Variant="MudBlazor.Variant.Outlined" Margin=MudBlazor.Margin.Dense T="Region" Clearable="true" OnClearButtonClick="ClearRegion"
+                                                     @bind-Value="selectedRegion"
+                                                     SearchFunc="@SearchRegion"
+                                                     ToStringFunc="@(e=> e==null?null : $"{e.RegionName}")" />
+                                    </MudItem>
+                                </MudGrid>
+
+                                <div class="get_client_info" @onclick="(e=> ClearAllRegionValues() )">
+                                    <div class="yesno_f01 get_client_info info_fc_right">Очистить все</div>
+                                </div>
+                            </div>
+                            <div class="col-md-12">
+                                @if (selectedRegion.Values != null)
+                                {
+                                    <MudSelect T="RegionValue" Label="Территория обслуживания (Районы):" MultiSelection="true"
+                                       @bind-Value="@selectedRegionValue"
+                                       @bind-SelectedValues="@selectedRegionValues">
+
+                                        @if (selectedRegion.Values != null)
+                                            @foreach (var district in selectedRegion.Values)
+                                            {
+                                                <MudSelectItem T="RegionValue" Value="@district">@district.Value</MudSelectItem>
+                                            }
+                                    </MudSelect>
+                                }
+                                @foreach (var regionValue in selectedRegionValues)
+                                {
+                                    <div>@regionValue.RegionName  @regionValue.Value</div>
+                                }
+
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-12">
+                        <h5>Комментарий:</h5>
+                        @*<textarea class="form-control" rows="1" @bind="employee.Comment" style="width:100%;"></textarea>*@
+                        <InputText @bind-Value=employee.Comment class="form-control form_input_plnd" style="width:100%;" />
+                        <ValidationMessage For="() => employee.Comment" />
+                    </div>
+                </div>
+
+                <div class="row" style="margin-top:20px;">
+                    <MudCheckBox @bind-Checked="@employee.IsActive" Label="Разрешено работать" Color="Color.Primary" Class="m0p0"></MudCheckBox>
+                </div>
+
+                <div class="row" style="margin-top:20px;">
+                    <div class="col-md-12">
+
+                        @if (id != null)
+                        {
+                            <MudButton Disabled="@_processing" Variant="MudBlazor.Variant.Filled" Class="button_deleteChange" OnClick="@(e=>OpenDialogDelete(employee.Id, employee.GetFullName()))">
+                                @if (_processing)
+                                {
+                                    <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                                    <MudText Class="ms-2">Processing</MudText>
+                                }
+                                else
+                                {
+                                    <MudText Class="button_saveChange_text">Удалить</MudText>
+                                }
+                            </MudButton>
+                        }
+
+                        <div style="float: right;">
+
+                            <MudButton Disabled="@_processing" Variant="MudBlazor.Variant.Filled" Class="button_discardChange" OnClick="@(e=>CloseWindow())">
+                                <MudText Class="button_discardChange_text">Отменить</MudText>
+                            </MudButton>
+                            <MudButton Disabled="@_processing" Variant="MudBlazor.Variant.Filled" Class="button_saveChange" ButtonType="MudBlazor.ButtonType.Submit" OnClick="(()=>anchorTop.FocusAsync())">
+                                @if (_processing)
+                                {
+                                    <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                                    <MudText Class="ms-2">Processing</MudText>
+                                }
+                                else
+                                {
+                                    <MudText Class="button_saveChange_text">Сохранить</MudText>
+                                }
+                            </MudButton>
+
+                        </div>
+                    </div>
+                </div>
+
+                <Blazored.FluentValidation.FluentValidationValidator></Blazored.FluentValidation.FluentValidationValidator>
+            </EditForm>
+        </div>
+
+
+
+    </div>
+}
+else
+{
+    <h5>Мастер не найден. Возможно он был удален.</h5>
+}
+
+
+@code
+{
+
+    private void NavigateToAnchor(/*string anchorName*/)
+    {
+        string anchorName = "vasya";
+        NavigationManager.NavigateTo($"#{anchorName}", true);
+    }
+
+    [CascadingParameter]
+    private Task<AuthenticationState> authenticationStateTask { get; set; }
+
+    [Parameter]
+    [SupplyParameterFromQuery]
+    public string id { get; set; }
+    public string? password { get; set; } = null; //для показа диспетчеру(пока нет отправки)
+    public IMask emailMask = RegexMask.Email();
+
+    public PatternMask phoneMask = new PatternMask(@"+# ### ### ## ##")
+        {
+            MaskChars = new[] { new MaskChar('#', @"[0-9]") }
+        };
+
+    private int currentTab = (int)ContractType.Physical;
+    public void setContractType(ContractType type)
+    {
+        currentTab = (int)type;
+        employee.Contract.ContractType = type.ToString();
+    }
+
+    //Вкладки По контракту или за наличные
+    private void SetWorkMode(string workMode)
+    {
+        if (workMode == EmployeeWorkMode.ByContract.ToString())
+        {
+            employee.WorkMode = workMode;
+            if (employee.Contract == null)
+            {
+                employee.Contract = new();
+                employee.Contract.ContractType = ContractType.Physical.ToString();
+            }
+        }
+        else
+        {
+            employee.WorkMode = workMode;
+            employee.Contract = null;
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        GetEmployeeTypes();
+        GetSkills();
+
+        if (!string.IsNullOrWhiteSpace(id))
+        {
+            if (id.Length != 24)
+            {
+                employee = null;
+                return;
+            }
+            Edit(id); //object is null if id wrong
+        }
+    }
+
+    private bool _processing = false;
+    private void ShowNotification(Severity severity, string text)
+    {
+        Snackbar.Clear();
+        Snackbar.Add(text, severity);
+    }
+
+    private void CloseWindow()
+    {
+        NavigationManager.NavigateTo("/employees");
+    }
+
+    private Address address = new Address();
+
+    //РЕГИОНЫ
+    private Region selectedRegion = new Region();
+    private async Task<IEnumerable<Region>> SearchRegion(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            //return null;
+            return regionService.GetAll().Where(x => !string.IsNullOrEmpty(x.RegionName)).Take(20);
+        }
+
+        var response = regionService.GetAll();
+        var match = response.FindAll(x => !string.IsNullOrEmpty(x.RegionName) && x.RegionName.ToLower().Contains(value.ToLower()));
+
+        return match;
+    }
+
+    private List<Region> regions = new List<Region>();
+    private void GetRegions()
+    {
+        regions = regionService.GetAll().ToList();
+    }
+    //Значения выбранных регионов
+    //@bind-Value="@selectedRegion"
+    //@bind-SelectedValues="selectedRegions"
+    private RegionValue selectedRegionValue = new();
+    private IEnumerable<RegionValue> selectedRegionValues { get; set; } = new HashSet<RegionValue>();
+    private string GetMultiSelectionTextRegionValues(List<string> selectedValues)
+    {
+        return $"Выбрано районов: {selectedValues.Count}";
+    }
+    private void ClearRegion()
+    {
+        selectedRegion = new Region();
+    }
+    private void ClearAllRegionValues()
+    {
+        selectedRegion = new Region();
+        selectedRegionValues = new HashSet<RegionValue>();
+    }
+    //
+    //
+    private List<OrderType> orderTypes = new List<OrderType>();
+    private IEnumerable<OrderType> selectedOrderTypes { get; set; } = new HashSet<OrderType>();
+    private void GetEmployeeTypes()
+    {
+        orderTypes = orderTypeService.GetAll().OrderBy(x => x.Position).ToList();
+    }
+
+    private bool isHideAllSkills = true;
+    private void ShowNotification()
+    {
+        isHideAllSkills = !isHideAllSkills;
+    }
+    private Skill selectedSkill = new Skill();
+    private IEnumerable<Skill> selectedSkills { get; set; } = new HashSet<Skill>();
+    private string GetMultiSelectionText(List<string> selectedValues)
+    {
+        return $"Выбрано навыков: {selectedValues.Count}";
+    }
+
+    private List<Skill> skills = new List<Skill>();
+    private void GetSkills()
+    {
+        skills = skillService.GetAll().OrderBy(x => x.Position).ToList();
+    }
+    private void OnChangeSkillsDisabled(object value, string name)
+    {
+        var str = value is IEnumerable<int> ? string.Join(", ", (IEnumerable<int>)value) : value;
+    }
+    private void OnChangeSkills(object value, string name)
+    {
+        var str = value is IEnumerable<object> ? string.Join(", ", (IEnumerable<object>)value) : value;
+    }
+
+    private FileView file;
+    private async void SetUploadedFileNames(InputFileChangeEventArgs e, string employeeId)
+    {
+        try
+        {
+            //ClearOldValues
+            file = null;
+
+            var item = e.GetMultipleFiles().ToArray()[0];
+            if (item.Size > Utils.UploadPath.MAX_FILE_SIZE)
+            {
+                ShowNotification(Severity.Warning, "Размер файла должен быть не больше " + ((Utils.UploadPath.MAX_FILE_SIZE / 1024) / 1024) + "МБ");
+                return;
+            }
+
+            if (Utils.UploadPath.IsImage(item.Name) == false)
+            {
+                ShowNotification(Severity.Warning, "Разрешены только изображения");
+                return;
+            }
+
+            string oldFileName = item.Name;
+            string newFileName = string.Concat(Guid.NewGuid().ToString(), Path.GetExtension(item.Name));
+            var tfile = new TFile();
+            tfile.InitialName = oldFileName;
+            tfile.Name = newFileName;
+
+            file = new FileView(employeeId, tfile, item);
+
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            ShowNotification(Severity.Warning, "Ошибка загрузки файлов");
+            Console.WriteLine("SetUploadedFileNames: " + ex.Message);
+        }
+    }
+    private async Task<TFile> UploadPhoto()
+    {
+        try
+        {
+            if (file != null && file.browserFile != null)
+            {
+                string path = Path.Combine(Utils.UploadPath.UploadDir, file.TFile.Name);
+                await using FileStream fs = new(path, FileMode.Create);
+                var tt = file.browserFile.OpenReadStream(Utils.UploadPath.MAX_FILE_SIZE);
+                await tt.CopyToAsync(fs);
+
+                var tfile = file.TFile;
+                tfile.Size = file.browserFile.Size;
+                tfile.FullPath = Path.Combine(Utils.UploadPath.UploadUrl, tfile.Name);
+                return tfile;
+            }
+
+            return null;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.Message);
+            //Console.Beep(2000, 200);
+            return null;
+        }
+    }
+
+    private void DeleteFile()
+    {
+        file = null;
+        StateHasChanged();
+    }
+
+    private Employee employee = new Employee();
+
+    private string Validation()
+    {
+        if (string.IsNullOrWhiteSpace(employee.LastName))
+        {
+            ShowNotification(Severity.Warning, "Не задано поле \"Фамилия\" ");
+            return ValidationCode.EmptyName;
+        }
+
+        if (string.IsNullOrWhiteSpace(employee.FirstName))
+        {
+            ShowNotification(Severity.Warning, "Не задано поле \"Имя\" ");
+            return ValidationCode.EmptyName;
+        }
+
+        if (string.IsNullOrWhiteSpace(employee.Phone) && string.IsNullOrWhiteSpace(employee.Mail))
+        {
+            ShowNotification(Severity.Warning, "Заполните поле \"Телефон\" или \"Электронная почта\" ");
+            return ValidationCode.EmptyName;
+        }
+
+        //Проверка телефона
+        if (CheckPhoneDuplicates() > 0)
+        {
+            ShowNotification(Severity.Warning, "Мастер с заданным телефоном уже существует");
+            return ValidationCode.DuplicateFields;
+        }
+
+        //Проверка логина
+        if (CheckLoginDuplicates() > 0)
+        {
+            ShowNotification(Severity.Warning, "Мастер с заданным логином уже существует");
+            return ValidationCode.DuplicateFields;
+        }
+
+        return ValidationCode.ValidationSuccess;
+    }
+
+    private int CheckLoginDuplicates()
+    {
+        var result = employeeService.GetEmployeeByLogin(employee.Login);
+
+        //Не проверять самого себя
+        if (result != null && result.Id == employee.Id)
+            return 0;
+
+        if (result != null)
+            return 1;
+        else
+            return 0;
+    }
+    private int CheckPhoneDuplicates()
+    {
+        var result = employeeService.GetEmployeeByPhone(employee.Phone);
+
+        //Не проверять самого себя
+        if (result != null && result.Id == employee.Id)
+            return 0;
+
+        if (result != null)
+            return 1;
+        else
+            return 0;
+    }
+
+    public ElementReference anchorTop;
+    private async void Save()
+    {
+        try
+        {
+            _processing = true; await Task.Delay(1);
+
+            employee.Trim();
+
+            if (!string.IsNullOrWhiteSpace(employee.Phone))
+            {
+                employee.HowToNotify = EmployeeHowToNotify.Phone.ToString();
+            }
+            else if (!string.IsNullOrWhiteSpace(employee.Mail))
+            {
+                employee.HowToNotify = EmployeeHowToNotify.Mail.ToString();
+            }
+
+            //List<string> skillIds = selectedSkills.Where(x => x != null).Select(x => x.Id).ToList();
+            employee.Skills = selectedSkills.ToList();
+
+            employee.OrderTypes = selectedOrderTypes.ToList();
+
+            if (employee.Contract != null)
+            {
+                //Занулить неиспользуемые данные договора
+                switch (currentTab)
+                {
+                    case (int)ContractType.Physical:
+                    case (int)ContractType.IndividualEntrepreneur:
+                        employee.Contract.OrganizationName = null;
+                        break;
+
+                    case (int)ContractType.LimitedLiabilityCompany:
+                        employee.Contract.FirstName = null;
+                        employee.Contract.LastName = null;
+                        employee.Contract.MiddleName = null;
+                        break;
+                }
+            }
+
+            //РЕГИОНЫ(Районы)
+            if (selectedRegionValues != null && selectedRegionValues.ToList().Count > 0)
+            {
+                employee.Regions = selectedRegionValues.ToList();
+            }
+            else { employee.Regions = null; }
+
+            employee.Address = address;
+
+            //UPLOAD_PHOTO
+            if (file == null)//если удален( не выбран )
+            {
+                employee.Photo = null;
+            }
+            else
+            {
+                if (file.browserFile != null) //если выбран новый файл
+                {
+                    TFile uploadResult = await UploadPhoto();
+                    if (uploadResult == null)
+                    {
+                        ShowNotification(Severity.Error, "Не удалось загрузить файлы");
+                        return;
+                    }
+                    employee.Photo = uploadResult;
+                }
+            }
+
+            var validation = Validation();
+            if (validation != ValidationCode.ValidationSuccess)
+            {
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(employee.Login))
+            {
+                employee.Login = employee.GenerateLogin();
+            }
+            employee.Login = new string(employee.Login.ToCharArray().Where(c => !Char.IsWhiteSpace(c)).ToArray());
+
+            if (string.IsNullOrWhiteSpace(employee.Password))
+            {
+                string newPass = employee.CreateRandomPass();
+                employee.Password = employee.GetHash(newPass);
+                password = newPass;
+            }
+
+
+            //Создал Изменил Дата создания/изменения
+            if (string.IsNullOrEmpty(employee.Creator))
+            {
+                employee.Creator = authenticationStateTask?.Result?.User?.Identity?.Name;
+            }
+            if (employee.CreateTime == null)
+            {
+                employee.CreateTime = DateTime.Now;
+            }
+            employee.UserLastUpdate = authenticationStateTask?.Result?.User?.Identity?.Name;
+            employee.LastUpdateTime = DateTime.Now;
+            //
+
+            employeeService.SaveOrUpdate(employee);
+            rabbit.CreateQueue(employee.Id);
+            ShowNotification(Severity.Success, "Мастер сохранен");
+        }
+        catch (Exception ex)
+        {
+            ShowNotification(Severity.Error, "Ошибка сохранения данных");
+            Console.WriteLine("Save_Exception: " + ex.Message);
+            return;
+        }
+        finally
+        {
+            _processing = false;
+            StateHasChanged();
+        }
+    }
+    private void Reset()
+    {
+        employee = new Employee();
+
+        selectedSkill = new Skill();
+        selectedSkills = new HashSet<Skill>();
+
+        address = new Address();
+    }
+    private void Edit(string id)
+    {
+        Reset();
+        employee = employeeService.GetOne(id);
+        if (employee == null) { return; }
+
+        if (employee.Address != null)
+        {
+            address = employee.Address;
+        }
+
+        //Навыки
+        if (employee.Skills != null && employee.Skills.Count() > 0)
+        {
+            var employeeSkills = new List<Skill>();
+            foreach (var employeeSkill in employee.Skills)
+            {
+                //skillService.GetSkill(skillId)
+                var skill = skills.Find(x => x.Id == employeeSkill.Id);//Найти именно скилл из предложенногоСпискаВсехСкилов чтобы проставлялась галочка чекбокса
+                if (skill != null)
+                    employeeSkills.Add(skill);
+            }
+            selectedSkills = employeeSkills;
+        }
+
+        //ТипыЗаказов(Специализации)
+        if (employee.OrderTypes != null && employee.OrderTypes.Count() > 0)
+        {
+            var employeeOrderTypes = new List<OrderType>();
+            foreach (var employeeType in employee.OrderTypes)
+            {
+                var type = orderTypes.Find(x => x.Id == employeeType.Id);//Найти именно скилл из предложенногоСпискаВсехСкилов чтобы проставлялась галочка чекбокса
+                if (type != null)
+                    employeeOrderTypes.Add(type);
+            }
+            selectedOrderTypes = employeeOrderTypes;
+        }
+
+        //Регионы
+        if (employee.Regions != null && employee.Regions.Count > 0)
+        {
+            selectedRegionValues = employee.Regions;
+        }
+
+        if (employee.Photo != null)
+        {
+            file = new FileView(employee.Id, employee.Photo);
+        }
+
+        //Установить вкладку тип договора
+        if (employee.Contract != null && employee.Contract.ContractType != null)
+        {
+            currentTab = (int)Enum.Parse(typeof(ContractType), employee.Contract.ContractType);
+        }
+
+    }
+
+    private async void OpenDialogDelete(string id, string name)
+    {
+        var options = new MudBlazor.DialogOptions { CloseOnEscapeKey = true };
+        var dialog = DialogService.Show<Components.Dialog>("Удалить " + name + "?", options);
+
+        var result = await dialog.Result;
+        if (!result.Cancelled)
+        {
+            bool delResult = Delete(id);
+            if (delResult == true)
+            {
+                CloseWindow();
+            }
+            else { ShowNotification(Severity.Error, "Ошибка удаления данных"); }
+        }
+
+    }
+    private bool Delete(string id)
+    {
+        try
+        {
+            //Удалить очередь
+            rabbit.DeleteQueue(id);
+
+            var deleteResult = employeeService.Delete(id);
+
+            Reset();
+            if (deleteResult > 0)
+                return true;
+            else
+                return false;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private async void OpenDialogResetPassword(string id, string name)
+    {
+        var options = new MudBlazor.DialogOptions { CloseOnEscapeKey = true };
+        var dialog = DialogService.Show<Components.Dialog>("Сбросить пароль " + name + "?", options);
+
+        var result = await dialog.Result;
+        if (!result.Cancelled)
+        {
+            string newPass = employee.CreateRandomPass();
+            employee.Password = employee.GetHash(newPass);
+            password = newPass;
+
+            Save();
+        }
+
+    }
+
+}

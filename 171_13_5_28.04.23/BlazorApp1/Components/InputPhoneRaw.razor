@@ -1,0 +1,20 @@
+﻿@using System.Text.RegularExpressions;
+
+<input class="form_input_plnd" @bind="Phone" @oninput="@onInputPhone" style="width:100%;" />
+
+
+
+@code {
+    [Parameter]
+    public string Phone { get; set; }
+
+    private void onInputPhone(Microsoft.AspNetCore.Components.ChangeEventArgs args)
+    {
+        if ((string)args.Value == "8" && string.IsNullOrEmpty(Phone))
+        {
+            //Console.WriteLine(value.Length);
+            args.Value = "7";
+        }
+        Phone = (string)args.Value;
+    }
+}

@@ -1,0 +1,79 @@
+﻿@page "/neworder"
+@attribute [Authorize(Roles = "Admin,Dispatcher")]
+@*@attribute [Authorize(Policy = "RequireRole")]*@
+@using BlazorApp1.Models
+@using BlazorApp1.Services
+@using BlazorApp1.Views
+@using MudBlazor.Utilities
+@inject ILoggerFactory LoggerFactory
+@inject Services.EmployeeService employeeService
+@inject Services.ClientService clientService
+@inject Services.SkillService skillService
+@inject Services.OrderTypeService orderTypeService
+@inject Services.OrderTemplateService orderTemplateService
+@inject DataListService dataListService
+@inject Services.OrderService orderService
+@inject Services.DaDataService dadataService
+
+@inject ISnackbar Snackbar
+@inject NavigationManager NavigationManager
+
+
+<div class="row">
+    <div class="col-12 ">
+        <h1>Создать новый заказ</h1>
+    </div>
+
+    <div class="col-6">
+
+        <table class="table table-borderless table_borders">
+            <thead>
+                <tr class="table_d_head">
+                    <th class="table_createorder_width">Шаблоны новых заказов</th>
+                    <th class="table_createorder_width">Описание шаблона</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (templates.Count() > 0)
+                {
+                    @foreach (var template in templates)
+                    {
+                        <tr class="hover_on_row">
+                            <td>
+                                <a href="/order?template=@template.Id" style="text-decoration: none;">
+                                    <div style="width:100%;" class="createorder_table_data_text">
+                                        @template.OrderTemplateName
+                                    </div>
+                                </a>
+                            </td>
+                            <td>
+                                <div style="width:100%;" class="createorder_table_data_text">
+                                    @template.OrderDescription
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@code
+{
+    public void Debug()
+    {
+
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        GetTemplates();
+    }
+
+    public List<OrderTemplate> templates = new();
+    private void GetTemplates()
+    {
+        templates = orderTemplateService.GetAll();
+    }
+}

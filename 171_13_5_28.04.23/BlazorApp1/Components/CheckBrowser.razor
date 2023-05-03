@@ -1,0 +1,21 @@
+﻿@page "/checkbrowser"
+
+@inject IHttpContextAccessor HttpContextAccessor
+@inject NavigationManager NavigationManager
+
+
+@code
+{
+
+    protected override async Task OnInitializedAsync()
+    {
+        bool isInternetExplorer = HttpContextAccessor.HttpContext.Request.IsInternetExplorer();
+        
+        if (isInternetExplorer)
+        {
+            NavigationManager.NavigateTo("/wrong_browser");
+        }   
+    }
+
+   
+}

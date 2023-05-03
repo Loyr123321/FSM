@@ -1,0 +1,376 @@
+﻿@page "/regions"
+@attribute [Authorize(Roles = "Admin,Dispatcher")]
+@*@attribute [Authorize(Policy = "RequireRole")]*@
+@using BlazorApp1.Components
+@using BlazorApp1.Models
+@using BlazorApp1.Models.Validation;
+@using BlazorApp1.Services
+
+@using Blazored.Toast.Configuration
+@inject RegionService regionService
+@inject IToastService toastService
+@inject ILoggerFactory LoggerFactory
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+
+@using MudBlazor.Utilities
+
+
+
+
+
+
+<div class="row">
+    <div class="col-12">
+        <div class="row page_header align-center" style="margin-bottom:20px;">
+            <div class="col-3  my_fc">
+                <h1> Списки регионов</h1>
+            </div>
+
+            <div class="col-12 col-sm-6">
+                <MudButton Disabled="@_processing" Class="button_add_to_data" OnClick="@((e)=>{Reset();ShowHide(true);})">
+                    <MudText Class="create_new_btn_text">Создать новый регион</MudText>
+                </MudButton>
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-xxl-4  col-xl-4 col-lg-6 col-md-12 col-sm-12  ">
+        <table class="table table-borderless table_borders_dish">
+            <tbody>
+                @if (regions != null && regions.Count() > 0)
+                {
+                    @foreach (var region in regions)
+                    {
+                        <tr @onclick="@((e)=>{Edit(region.Id);SetSelectedClass(region.Id);ShowHide(true);})">
+                            <td class="@(selectedId == region.Id ? "td_rdl active" : "td_rdl") d-flex align-items-center justify-content-between table_data_text">
+                                @region.RegionName
+                                <button class="button_table_del" @onclick="(e=>OpenDialogDelete(region.Id, region.RegionName))">
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+
+        </table>
+    </div>
+    <div class="col-12 col-xxl-4  col-xl-6 col-lg-6 col-md-12 col-sm-12 Value_add_body @showhideClass">
+        <div class="region_dValue_fix">
+
+            @if (selectedId != null)
+            {
+                <h3>Регион:</h3>
+            }
+            else
+            {
+                <h3>Создать регион:</h3>
+            }
+            <label class="input_label">Название региона</label>
+            <input class="form_input_plnd form-control z_101" @bind="region.RegionName" />
+
+            @if (values.Count > 0)
+            {
+                <label class="region_newValue_label">Район(Метро/Зона обслуживания):</label>
+                <MudDropContainer @ref="_dropContainer" T="RegionValue" Items="values" ItemsSelector="@((item,dropzone) => item.Selector == "myselector")" ItemDropped="ItemUpdated" Class="d-flex flex-wrap flex-grow-1" ItemIsDisabled="@( (item) => true)">
+                    <ChildContent>
+                        <MudPaper Class="ma-4 flex-grow-1">
+                            <MudList Clickable="false" Class="d-flex flex-column mud-height-full">
+                                <MudDropZone T="RegionValue" Identifier="1" Class="flex-grow-1" AllowReorder="true" />
+                            </MudList>
+                        </MudPaper>
+                    </ChildContent>
+                    <ItemRenderer>
+                        <div class="row align-items-center row_space_between">
+                            <div class="col-1 col-sm-2" style="width:fit-content" draggable="true">
+                                <button class="dragdrop_button"></button>
+                            </div>
+                            <div class="col-6 col-sm-8">
+                                <input class="form_input_Value form-control z_101" @bind="@context.Value" style="width:100%;" placeholder="" />
+                            </div>
+                            <div class="col-1 col-sm-2" style="width:fit-content">
+                                <button class="button_Value_delete" @onclick="(e => DeleteValue(context))">
+                                </button>
+                            </div>
+                        </div>
+                    </ItemRenderer>
+                </MudDropContainer>
+            }
+            <div class="type_btn_group">
+                <button @onclick="@(e => AddValue())" Title="Add">
+                    <div class="button_add_value"></div>
+                    <span class="text_button_add_value">Добавить район </span>
+                </button>
+            </div>
+            <div style="float: right; margin-top:15px;">
+                <MudButton Disabled="@_processing" Class="button_discardChange" OnClick="@((e)=>{Reset();ShowHide(false);})">
+                    <MudText Class="button_discardChange_text">Отменить</MudText>
+                </MudButton>
+                <MudButton Disabled="@_processing" Class="button_saveChange" OnClick="@(e=>Save())">
+                    @if (_processing)
+                    {
+                        <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                        <MudText Class="ms-2">Сохраняется</MudText>
+                    }
+                    else
+                    {
+                        <MudText Class="button_saveChange_text">Сохранить</MudText>
+                    }
+                </MudButton>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+
+
+
+@code
+{
+    protected override async Task OnInitializedAsync()
+    {
+        GetRegions();
+        GetValues();
+    }
+    private bool _processing = false;
+    private void ShowNotification(Severity severity, string text)
+    {
+        Snackbar.Clear();
+        Snackbar.Add(text, severity);
+    }
+
+    private MudDropContainer<RegionValue> _dropContainer;
+    private void ItemUpdated(MudItemDropInfo<RegionValue> dropItem)
+    {
+        var indexOffset = dropItem.DropzoneIdentifier switch
+        {
+            "2" => values.Count(x => x.Selector == "myselector"),
+            _ => 0,
+        };
+        values.UpdateOrder(dropItem, item => item.Position, indexOffset);
+    }
+    private void Refresh()
+    {
+        if (_dropContainer != null)
+        {
+            _dropContainer.Items = values;
+            _dropContainer.Refresh();
+
+            ////_dropContainer.ItemRenderer.FOCUS()
+        }
+    }
+
+    private List<Models.Region> regions;
+    private Models.Region region = new();
+    private void GetRegions()
+    {
+        regions = regionService.GetAll();
+    }
+    private List<RegionValue> values = new();
+    private void GetValues()
+    {
+        if (region != null)
+        {
+            if (region.Values != null)
+            {
+                values = region.Values.OrderBy(x => x.Position).ToList();
+            }
+        }
+    }
+
+
+    private void AddValue()
+    {
+        var validation = ValidationValues();
+        if (validation != ValidationCode.ValidationSuccess)
+        {
+            return;
+        }
+
+        var value = new RegionValue();
+        if (values.Count() > 0)
+        {
+            value.Position = values[values.Count - 1].Position + 1;
+        }
+        values.Add(value);
+        Refresh();
+    }
+
+    private string ValidationValues()
+    {
+        int count = 0;
+        foreach (var value in values.Where(x => x.Selector == "myselector"))
+        {
+            if (string.IsNullOrWhiteSpace(value.Value))
+            {
+                ShowNotification(Severity.Warning, "Заполните предыдущее поле");
+                return ValidationCode.EmptyFieldsNames;
+            }
+            count++;
+        }
+
+        var list = values.Where(x => x.Selector == "myselector").ToList();
+        var distinctList = values.Where(x => x.Selector == "myselector").GroupBy(x => x.Value).Select(g => g.First()).ToList();
+        var isUnique = (list.Count() == distinctList.Count());
+        if (isUnique == false)
+        {
+            ShowNotification(Severity.Warning, "Дубликаты не допускаются");
+            return ValidationCode.DuplicateFields;
+        }
+
+        return ValidationCode.ValidationSuccess;
+    }
+    private string Validation()
+    {
+        if (string.IsNullOrWhiteSpace(region.RegionName))
+        {
+            ShowNotification(Severity.Warning, "Не задано название региона");
+            return ValidationCode.EmptyName;
+        }
+
+        int count = 0;
+        foreach (var value in values.Where(x => x.Selector == "myselector"))
+        {
+            if (string.IsNullOrWhiteSpace(value.Value))
+            {
+                ShowNotification(Severity.Warning, "Не все поля заполнены");
+                return ValidationCode.EmptyFieldsNames;
+            }
+            count++;
+        }
+        if (count == 0)
+        {
+            ShowNotification(Severity.Warning, "Список пуст");
+            return ValidationCode.CountIsNull;
+        }
+
+        var list = values.Where(x => x.Selector == "myselector").ToList();
+        var distinctList = values.Where(x => x.Selector == "myselector").GroupBy(x => x.Value).Select(g => g.First()).ToList();
+        var isUnique = (list.Count() == distinctList.Count());
+        if (isUnique == false)
+        {
+            ShowNotification(Severity.Warning, "Дубликаты не допускаются");
+            return ValidationCode.DuplicateFields;
+        }
+
+        return ValidationCode.ValidationSuccess;
+    }
+    private async void Save()
+    {
+        try
+        {
+            _processing = true; await Task.Delay(1);
+
+            var valuesToSave = new List<RegionValue>();
+            foreach (var value in values)
+            {
+                if (value.Selector != "deleted")
+                {
+                    value.RegionId = region.Id;
+                    value.RegionName = region.RegionName;
+
+                    valuesToSave.Add(value);
+                }
+            }
+
+            //SAVE---
+            region.Values = valuesToSave;
+
+            var validation = Validation();
+            if (validation != ValidationCode.ValidationSuccess)
+            {
+                return;
+            }
+
+            regionService.SaveOrUpdate(region);
+
+            Reset();
+            ShowNotification(Severity.Success, "Регион сохранен");
+        }
+        catch (MongoDB.Driver.MongoWriteException ex)
+        {
+            if (ex.WriteError.Category == MongoDB.Driver.ServerErrorCategory.DuplicateKey)
+            {
+                ShowNotification(Severity.Warning, "Дубликаты названий регионов не допустимы");
+            }
+            return;
+        }
+        catch (Exception ex)
+        {
+            ShowNotification(Severity.Error, "Ошибка сохранения данных");
+            Console.WriteLine("Save_Exception: " + ex.Message);
+            return;
+        }
+        finally
+        {
+            _processing = false;
+            Refresh();
+            StateHasChanged();
+        }
+    }
+
+    private void Edit(string id)
+    {
+        region = regions.FirstOrDefault(x => x.Id == id);
+        if (region.Values != null)
+        {
+            values = region.Values.OrderBy(x => x.Position).ToList();
+            Refresh();
+
+        }
+
+    }
+    private void Reset()
+    {
+        region = new();
+        values.Clear();
+        selectedId = null;
+        GetRegions();
+        GetValues();
+    }
+    private void DeleteValue(RegionValue value)
+    {
+        value.Selector = "deleted";
+        Refresh();
+    }
+    private void Delete(string id)
+    {
+        regionService.Delete(id);
+
+
+        Reset();
+        GetRegions();
+        Refresh();
+        StateHasChanged();
+    }
+    private async void OpenDialogDelete(string id, string name)
+    {
+        var options = new DialogOptions { CloseOnEscapeKey = true };
+        var dialog = DialogService.Show<Dialog>("Удалить " + name + "?", options);
+
+        var result = await dialog.Result;
+        if (!result.Cancelled)
+        {
+            Delete(id);
+        }
+
+    }
+
+    private string selectedId;
+    private void SetSelectedClass(string id)
+    {
+        selectedId = id;
+    }
+    private string showhideClass = "d-none";
+    private void ShowHide(bool isShow)
+    {
+        if (isShow == false)
+        {
+            showhideClass = "d-none";
+        }
+        else
+        {
+            showhideClass = "";
+        }
+    }
+}

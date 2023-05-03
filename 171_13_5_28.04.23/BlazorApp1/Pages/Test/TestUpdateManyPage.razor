@@ -1,0 +1,56 @@
+﻿@page "/test1111111"
+@using BlazorApp1.Models;
+@inject Services.OrderTemplateService templateService
+@inject Services.OrderService orderService
+
+<div style="cursor:pointer; background-color: pink;" @onclick="(()=>Add1000Orders())">Добавить 1000записей</div>
+
+@code 
+{
+    public void Add1000Orders()
+    {
+        DateTime start = DateTime.Now;
+        Console.WriteLine(start);
+
+        var template = templateService.GetOne("6433f623d4562926fdbd0c08");
+        for(int i=0; i<10000; i++)
+        {
+            var order = new Order(template);
+            order.OrderNum = i;
+
+            foreach (var f in template.Fields)
+            {
+                var field =order.Template.Fields.FirstOrDefault(x => x.Id == f.Id);
+                if (field.Type == FieldType.FTText)
+                {
+                    field._value = i.ToString() + "new";
+                }
+                if (field.Type == FieldType.FTLong)
+                {
+                    field._value = i;
+                }
+                if (field.Type == FieldType.FTRuble)
+                {
+                    field._value = i;
+                }
+                if (field.Type == FieldType.FTDouble)
+                {
+                    field._value = i;
+                }
+            }
+
+      
+
+
+            orderService.SaveOrUpdate(order);
+        }
+        DateTime end = DateTime.Now;
+        var result = end - start;
+        Console.WriteLine(end);
+        Console.WriteLine(result);
+        Console.WriteLine("Создание законченоNew");
+        
+
+    }
+
+}

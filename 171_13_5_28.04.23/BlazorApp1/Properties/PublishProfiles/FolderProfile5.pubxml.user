@@ -1,0 +1,11 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<!--
+https://go.microsoft.com/fwlink/?LinkID=208121.
+-->
+<Project>
+  <PropertyGroup>
+    <_PublishTargetUrl>C:\Users\frolov.vvi\Desktop\114_дляКепыЗаказы\112\BlazorApp1\bin\Release\net6.0\publish\</_PublishTargetUrl>
+    <History>True|2022-12-01T10:18:43.6191979Z;True|2022-12-01T13:01:44.8898396+03:00;True|2022-12-01T12:56:14.0428585+03:00;True|2022-12-01T12:53:42.3593240+03:00;True|2022-12-01T12:34:29.9230887+03:00;True|2022-12-01T11:41:37.8191898+03:00;</History>
+    <LastFailureDetails />
+  </PropertyGroup>
+</Project>

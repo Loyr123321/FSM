@@ -1,0 +1,228 @@
+﻿@page "/ordertypes"
+@attribute [Authorize(Roles = "Admin,Dispatcher")]
+@*@attribute [Authorize(Policy = "RequireRole")]*@
+@using BlazorApp1.Components
+@using BlazorApp1.Models
+@using BlazorApp1.Models.Validation;
+@using BlazorApp1.Services
+@using Blazored.Modal
+@using Blazored.Modal.Services
+
+@using Blazored.Toast.Configuration
+
+@inject Services.OrderTypeService orderTypeService
+@inject ILoggerFactory LoggerFactory
+@inject ISnackbar Snackbar
+@using MudBlazor.Utilities
+
+
+<div class="row">
+
+    <div class="col-12 align-center">
+        <h1>Типы заказов</h1>
+        <br />
+    </div>
+
+    <div class="col-12 col-lg-10 col-md-10 col-sm-10 col-xs-10 types_of_body">
+        <MudDropContainer @ref="_dropContainer" T="OrderType" Items="orderTypes" ItemsSelector="@((item,dropzone) => item.Selector == "myselector")" ItemDropped="ItemUpdated" Class="d-flex flex-wrap flex-grow-1" ItemIsDisabled="@( (item) => true)">
+            <ChildContent>
+                <MudPaper Class="flex-grow-1">
+                    <MudList Clickable="false" Class="d-flex flex-column mud-height-full">
+                        <MudDropZone T="OrderType" Identifier="1" Class="justify-center align-center flex-grow-1" AllowReorder="true" />
+                        <div class="row" style="margin-bottom:10px">
+                            <div class="col-12">
+                                <div class="add_to_changeVal_btn">
+                                    <button @onclick="@(e => AddOrderType())" class="type_btn_group" Title="Add">
+                                        <div class="button_add_value"></div>
+                                        <span class="text_button_add_value">Добавить тип </span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="save_cancel_group_btn_typesOrder">
+                                    <MudButton Disabled="@_processing" Class="button_discardChange" OnClick="@(e=>Reset())">
+                                        <MudText Class="button_discardChange_text">Отмена</MudText>
+                                    </MudButton>
+                                    <MudButton Disabled="@_processing" Class="button_saveChange" OnClick="@(e=>Save())">
+                                        @if (_processing)
+                                        {
+                                            <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                                            <MudText Class="ms-2">Сохраняется</MudText>
+                                        }
+                                        else
+                                        {
+                                            <MudText Class="button_saveChange_text">Сохранить</MudText>
+                                        }
+                                    </MudButton>
+                                </div>
+                            </div>
+                        </div>
+                    </MudList>
+                </MudPaper>
+            </ChildContent>
+
+            <ItemRenderer>
+                <div class="row align-items-center row_space_between">
+                    <div class="col-1 col-xxl-1 col-xl-1 col-lg-1 col-md-2 col-sm-2" draggable="true">
+
+                        <button class="dragdrop_button"></button>
+                    </div>
+                    <div class="col-5 col-xxl-8 col-xl-8 col-lg-7 col-md-6 col-sm-6">
+                        <input class="form_input_Value z_101" @bind="@context.TypeName" style="width:100%;" placeholder="" />
+                    </div>
+                    <div class="col-3 col-xxl-2 col-xl-2 col-lg-2 col-md-2 col-sm-2">
+                        <input class="form_input_Value z_101" @bind="@context.ShortName" style="width:100%;" placeholder="" />
+                    </div>
+                    <div class="col-3 col-xxl-1 col-xl-1 col-lg-2 col-md-2 col-sm-2" style="text-align:right">
+                        <button class="button_Value_delete" @onclick="(e => Delete(context.Id))">
+                        </button>
+                    </div>
+
+                </div>
+            </ItemRenderer>
+
+        </MudDropContainer>
+
+
+    </div>
+</div>
+
+
+
+@code
+{
+    protected override async Task OnInitializedAsync()
+    {
+        GetOrderTypes();
+    }
+
+    private bool _processing = false;
+    private void ShowNotification(Severity severity, string text)
+    {
+        Snackbar.Clear();
+        Snackbar.Add(text, severity);
+    }
+
+    private MudDropContainer<OrderType> _dropContainer;
+    private void ItemUpdated(MudItemDropInfo<OrderType> dropItem)
+    {
+        var indexOffset = dropItem.DropzoneIdentifier switch
+        {
+            "2" => orderTypes.Count(x => x.Selector == "myselector"),
+            _ => 0,
+        };
+        orderTypes.UpdateOrder(dropItem, item => item.Position, indexOffset);
+    }
+    private void Refresh()
+    {
+        if (_dropContainer != null)
+        {
+            _dropContainer.Items = orderTypes;
+            _dropContainer.Refresh();
+        }
+    }
+
+    private List<OrderType> orderTypes = new List<OrderType>();
+    private void GetOrderTypes()
+    {
+        orderTypes = orderTypeService.GetAll().OrderBy(x => x.Position).ToList();
+
+    }
+    private void AddOrderType()
+    {
+        var orderType = new OrderType(string.Empty, string.Empty);
+        if (orderTypes.Count() > 0)
+        {
+            orderType.Position = orderTypes.Max(x => x.Position) + 1;
+        }
+        orderTypes.Add(orderType);
+        orderTypes = orderTypes.OrderBy(x => x.Position).ToList();
+        Refresh();
+    }
+
+
+    private string Validation()
+    {
+        foreach (OrderType ordertype in orderTypes.Where(x => x.Selector == "myselector"))
+        {
+            if (string.IsNullOrWhiteSpace(ordertype.TypeName))
+            {
+                ShowNotification(Severity.Warning, "Не все поля заполнены");
+                return ValidationCode.EmptyFieldsNames;
+            }
+        }
+
+        return ValidationCode.ValidationSuccess;
+    }
+    private async void Save()
+    {
+        try
+        {
+            _processing = true; await Task.Delay(1);
+
+            var validation = Validation();
+            if (validation != ValidationCode.ValidationSuccess)
+            {
+                return;
+            }
+
+            foreach (var ordertype in orderTypes)
+            {
+                if (ordertype.Selector == "deleted")
+                {
+                    orderTypeService.Delete(ordertype.Id);
+                }
+                else
+                {
+                    orderTypeService.SaveOrUpdate(ordertype);
+                }
+            }
+
+            GetOrderTypes();
+            Refresh();
+            ShowNotification(Severity.Success, "Типы обновлены");
+        }
+        catch (MongoDB.Driver.MongoWriteException ex)
+        {
+            if (ex.WriteError.Category == MongoDB.Driver.ServerErrorCategory.DuplicateKey)
+            {
+                ShowNotification(Severity.Warning, "Дубликаты не допустимы");
+            }
+            return;
+        }
+        catch (Exception ex)
+        {
+            ShowNotification(Severity.Error, "Ошибка сохранения данных");
+            Console.WriteLine("Save_Exception: " + ex.Message);
+            return;
+        }
+        finally
+        {
+            _processing = false;
+            Refresh();
+            StateHasChanged();
+        }
+    }
+
+    private void Reset()
+    {
+        orderTypes.Clear();
+        GetOrderTypes();
+        Refresh();
+        StateHasChanged();
+    }
+
+    private void Delete(string id)
+    {
+        //var orderType = orderTypes.Find(x => x.Id == id);
+        var orderType = orderTypes.FirstOrDefault(x => x.Id == id);
+        orderType.Selector = "deleted";//скрыть
+
+        //пересчитать Position (не обяз)
+        Refresh();
+    }
+
+}

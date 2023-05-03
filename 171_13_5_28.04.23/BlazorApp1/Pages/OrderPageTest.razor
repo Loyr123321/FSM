@@ -1,0 +1,2027 @@
+﻿@page "/order"
+@*@attribute [Authorize(Roles = "Admin,Dispatcher")]*@
+@attribute [Authorize(Policy = "RequireRole")]
+@using BlazorApp1.Components;
+@using BlazorApp1.Models
+@using BlazorApp1.Models.Mobile;
+@using BlazorApp1.Models.Mobile.Responses;
+@using BlazorApp1.Models.Validation;
+@using BlazorApp1.Services
+@using BlazorApp1.Views
+@using MudBlazor.Utilities
+@using System.Collections.ObjectModel;
+
+@inject ILoggerFactory LoggerFactory
+@inject Services.EmployeeService employeeService
+@inject Services.ClientService clientService
+@inject Services.SkillService skillService
+@inject RegionService regionService
+@inject Services.OrderTypeService orderTypeService
+@inject Services.OrderTemplateService orderTemplateService
+
+@inject Services.CancellationReasonService cancellationReasonService
+
+@inject DataListService dataListService
+@inject Services.OrderService orderService
+@inject Services.DaDataService dadataService
+@inject IDialogService DialogService
+
+@inject ISnackbar Snackbar
+@inject NavigationManager NavigationManager
+
+@inject Services.RabbitMQService rabbit
+
+
+
+<link rel="stylesheet" href="_content/Radzen.Blazor/css/material-base.css">
+
+@if (order != null)
+{
+    <div class="row">
+        <div class="col-12 col-sm-10 d-sm-block col-xxl-6">
+            <div class="row p-2 my_form_header">
+                <div class="col-6">
+                    @if (string.IsNullOrWhiteSpace(id))
+                    {
+                        <h1>Новый заказ</h1>
+                        <label class="input_label">Шаблон: @order?.Order?.Template?.OrderTemplateName</label>
+                    }
+                    else
+                    {
+                        <h1>Заказ @order.Order.OrderName</h1>
+                        <label class="input_label">Шаблон: @order?.Order?.Template?.OrderTemplateName</label>
+                    }
+                </div>
+                <div class="col-6" @onclick="@(e=>CloseWindow())">
+                    <div class="x_icon"></div>
+                </div>
+            </div>
+        </div>
+        <div class="w-100" />
+        <div class="col-12 col-sm-10 d-sm-block col-xxl-6 my_form">
+
+            <div class="row">
+
+                @if (!string.IsNullOrWhiteSpace(id))
+                {
+                    @if ((bool)order.Order.IsReadByExecutor)
+                    {
+                        <div class="read_by_executor">Прочитано исполнителем</div>
+                    }
+                    else
+                    {
+                        <div class="not_read_by_executor">Не прочитано исполнителем</div>
+                    }
+
+
+                    <MudSelect @bind-Value="order.Order.OrderStatus"
+                       T="OrderStatus"
+                       Margin=MudBlazor.Margin.Dense
+                       Variant="Variant.Outlined"
+                       AnchorOrigin="Origin.BottomCenter">
+                        @foreach (var status in statuses)
+                        {
+                            <MudSelectItem Value="@status">@status.StatusName</MudSelectItem>
+                        }
+                    </MudSelect>
+
+                    @if (order.Order.OrderStatus.Equals(OrderStatus.CANCELED) && cancellationReasons != null && cancellationReasons.Count > 0)
+                    {
+                        <label class="input_label">Причина отмены:</label>
+                        <MudSelect @bind-Value="order.Order.CancellationReason" Placeholder="- Без причины отмены -" Clearable="true" OnClearButtonClick="ClearCancellationReason"
+                       T="CancellationReason"
+                       Margin=MudBlazor.Margin.Dense
+                       Variant="Variant.Outlined"
+                       AnchorOrigin="Origin.BottomCenter">
+
+                            @foreach (var reason in cancellationReasons)
+                            {
+                                <MudSelectItem Value="@reason">@reason.ReasonName</MudSelectItem>
+                            }
+
+                        </MudSelect>
+
+                        @if (order.Order.CancellationReason != null)
+                        {
+                            <label class="input_label">Примечание:</label>
+                            <input class="form_input_plnd" @bind="order.Order.CancellationReason.ReasonNote" style="width:100%;" placeholder="" />
+                        }
+                    }
+                }
+
+                @*<div class="col-md-12">
+            <label>Название Заказа*:</label>
+            <input class="form_input_plnd" @bind="order.Order.OrderName" style="width:100%;" placeholder="" />
+            </div>*@
+            </div>
+
+            @if (id != null)
+            {
+                <div class="row" style="margin-top:20px;">
+                    <MudCheckBox @bind-Checked="@isNotifyExecutor" Label="Уведомить исполнителя об изменениях" Color="Color.Primary" Class="m0p0"></MudCheckBox>
+                </div>
+            }
+
+            <ul class="mytabmenu block_form">
+                <li class="@(currentTab == (int)Tabs.Description ? "mytab_button left_bradius mytab_active_button" : "mytab_button left_bradius")" @onclick="(e=> SetCurrentTab((int)Tabs.Description))">Описание</li>
+                <li class="@(currentTab == (int)Tabs.Client ? "mytab_button mytab_active_button" : "mytab_button")" @onclick="(e=> SetCurrentTab((int)Tabs.Client))">Клиент</li>
+                <li class="@(currentTab == (int)Tabs.Executor ? "mytab_button mytab_active_button" : "mytab_button")" @onclick="(e=> SetCurrentTab((int)Tabs.Executor))">Мастер</li>
+                <li class="@(currentTab == (int)Tabs.Order ? "mytab_button mytab_active_button" : "mytab_button")" @onclick="(e=> SetCurrentTab((int)Tabs.Order))">Заявка</li>
+                <li class="@(currentTab == (int)Tabs.Report ? "mytab_button right_bradius mytab_active_button" : "mytab_button right_bradius")" @onclick="(e=> SetCurrentTab((int)Tabs.Report))">Отчет</li>
+            </ul>
+
+
+
+            <div class="@(ShowHideTab((int)Tabs.Description))">
+                <div class="row">
+                    <div class="col-md-12">
+                        <label class="input_label">Тип заказа:</label>
+
+                        @*<MudSelect @bind-Value="orderType" T="OrderType" Margin=MudBlazor.Margin.Dense Variant="Variant.Outlined" AnchorOrigin="Origin.BottomCenter" Placeholder="- Без типа -"
+                               Clearable="true" OnClearButtonClick="ClearOrderType">
+                            @foreach (var type in orderTypes)
+                            {
+                                <MudSelectItem Value="@type">@type.TypeName</MudSelectItem>
+                            }
+                        </MudSelect>*@
+
+                        <RadzenDropDown 
+                                TValue="OrderType"
+                                Multiple="false"
+                                Chips="false"
+                                MaxSelectedLabels="0"
+                                AllowClear="true"
+                                AllowFiltering="true"
+                                FilterCaseSensitivity="Radzen.FilterCaseSensitivity.CaseInsensitive"
+                                Data=@orderTypes
+                                @bind-Value=@order.OrderType
+                                Change=@(args => OnChangeOrderType(args, "")) class="w-100 data_input_creating" />
+
+                    </div>
+                </div>
+                <div class="row" style="margin-top: 10px;">
+                    <div class="col-md-12">
+                        <label class="input_label">Описание:</label>
+                        <textarea class="textarea_input" @bind="order.Order.Template.OrderDescription" rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-3">
+                        <label class="input_t01text input_label">Запланирован на:</label>
+                        <RadzenDatePicker ShowTime="false" @bind-Value="order.Order.PlannedDate" DateFormat="dd.MM.yyyy" Style="margin-top: 3px;" />
+                        @*<MudDatePicker Margin=MudBlazor.Margin.Dense Variant="Variant.Outlined" Editable="false" @bind-Date="order.PlannedDate" Mask="@(new DateMask("00.00.0000"))" DateFormat="dd.MM.yyyy" />*@
+                    </div>
+                    <div class="col-md-3">
+                        <label></label>
+                        <MudTimePicker Margin=MudBlazor.Margin.Dense Variant="Variant.Outlined" Editable="true" @bind-Time="order.Order.PlannedTime" />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="input_label">Длительность:</label>
+                        <MudNumericField Margin=MudBlazor.Margin.Dense Variant="Variant.Outlined" @bind-Value="order.Order.Template.DurationHour" Label="Часов" Min="0" Max="168" />
+                    </div>
+                    <div class="col-md-3">
+                        <label></label>
+                        <MudNumericField Margin=MudBlazor.Margin.Dense Variant="Variant.Outlined" @bind-Value="order.Order.Template.DurationMinute" Label="Минут" Min="0" Max="59" Step="5" />
+                    </div>
+                </div>
+                <div class="row" style="margin-top:20px;">
+                    <div class="col-md-12">
+                        <div style="float: right;">
+                            <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="button_saveChange" OnClick="@(e=> SetCurrentTab(currentTab+1) )">
+                                <MudText Class="button_saveChange_text">Далее</MudText>
+                            </MudButton>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="@(ShowHideTab((int)Tabs.Client))">
+                <div class="row">
+                    <div class="col-md-12">
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <label class="input_label">Клиент:</label>
+                            </div>
+                            <div class="col-md-6 top103">
+                                <div class="get_client_info info_fc_right" @onclick=@ShowHideClientForm>
+                                    Новый клиент
+                                </div>
+                            </div>
+                        </div>
+
+                        <MudGrid>
+                            <MudItem xs="12">
+                                <MudAutocomplete Variant="Variant.Outlined" Margin=MudBlazor.Margin.Dense T="Client" Clearable="true" OnClearButtonClick="ClearClient"
+                                             @bind-Value="currentClient"
+                                             SearchFunc="@SearchClient"
+                                             ToStringFunc="@(e=> e==null?null : $"{e.GetFullName()+"    "+e.ClientPhone}"       )" />
+                            </MudItem>
+                        </MudGrid>
+
+                        <div class="get_client_info info_fc_right" @onclick="(e=> GetInfoFromCurrentClient() )">
+                            Получить адрес и контакты
+                        </div>
+
+                    </div>
+                </div>
+                <div style="margin-top:10px;">
+                    <AddressComponent address="@address" />
+                </div>
+                <div class="contacts" style="margin-top:20px;">
+
+                    @foreach (var contact in contacts)
+                    {
+                        <div class="row block_form">
+                            <div class="col-md-3">
+                                <label class="input_label">Имя</label>
+                                <input class="form_input_plnd" @bind="contact.ClientContactName" style="width:100%;" placeholder="" />
+                            </div>
+                            <div class="col-md-3">
+                                <label class="input_label">Телефон</label>
+                                <RadzenMask Mask="+* (***) ***-****"
+                                    CharacterPattern="[0-9]"
+                                    Placeholder="+7 (000) 000-0000"
+                                    @bind-Value=@contact.Phone
+                                    Style="width: 100%;"
+                                    class="form_input_plnd" />
+                            </div>
+                            <div class="col-md-4">
+                                <label class="input_label">Почта</label>
+                                <input class="form_input_plnd" @bind="contact.Mail" style="width:100%;" placeholder="" />
+                            </div>
+
+                            @if (contacts.Count() > 0 && contact.IsMain == false)
+                            {
+                                <div class="col-md-2">
+                                    <br>
+                                    <button class="button_Value_delete" @onclick="(e => DeleteContact(contact))"></button>
+                                </div>
+                            }
+
+
+                        </div>
+                    }
+                    <button @onclick="AddContact" class="type_btn_group">
+                        <div class="button_add_value"></div>
+                        <span class="text_button_add_value">Добавить контакт </span>
+                    </button>
+
+                </div>
+                <div class="row" style="margin-top:20px;">
+                    <div class="col-md-12">
+                        <div style="float: right;">
+                            <MudButton Variant="Variant.Filled" Color="Color.Default" Class="button_discardChange" OnClick="@(e=> SetCurrentTab(currentTab-1) )">
+                                <MudText Class="button_discardChange_text">Назад</MudText>
+                            </MudButton>
+                            <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="button_saveChange" OnClick="@(e=> SetCurrentTab(currentTab+1) )">
+                                <MudText Class="button_saveChange_text">Далее</MudText>
+                            </MudButton>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="@(ShowHideTab((int)Tabs.Executor))">
+                <div class="row" style="margin-top: 20px; margin-bottom: 10px;">
+                    <div class="col-md-12">
+                        <label class="input_label">Необходимые навыки:</label>
+
+                        <RadzenDropDown Multiple="true"
+                                Chips="false"
+                                MaxSelectedLabels="0"
+                                AllowClear="true"
+                                AllowFiltering="true"
+                                FilterCaseSensitivity="Radzen.FilterCaseSensitivity.CaseInsensitive"
+                                Data=@skills
+                                @bind-Value=@order.Order.Template.Skills
+                                SelectedItemsText="Навыков выбрано"
+                                Change=@(args => OnChangeSkills(args, "")) class="w-100 data_input_creating" />
+
+
+                        @if (order.Order.Template.Skills != null && order.Order.Template.Skills.Count > 0)
+                        {
+                            <div class="myflexwrap">
+                                @for (int i = 0; i < order.Order.Template.Skills.Count(); i++)
+                                {
+                                    if (isHideAllSkills == true && i == 5)
+                                    {
+                                        <span class="skill_hide_show" @onclick="(()=>ShowHideSkills())">...</span>
+                                        break;
+                                    }
+                                    <span class="skill">@order.Order.Template.Skills[i].SkillName</span>
+                                }
+                                @if (isHideAllSkills == false)
+                                {
+                                    <span class="skill_hide_show" @onclick="(()=>ShowHideSkills())">Скрыть</span>
+                                }
+                            </div>
+                        }
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-12">
+                        <label class="input_label">Регион:</label>
+                        <MudGrid>
+                            <MudItem xs="12">
+                                <MudAutocomplete Variant="Variant.Outlined" Margin=MudBlazor.Margin.Dense T="Region" Clearable="true" OnClearButtonClick="ClearRegion"
+                                             @bind-Value="selectedRegion"
+                                             SearchFunc="@SearchRegion"
+                                             ToStringFunc="@(e=> e==null?null : $"{e.RegionName}")" />
+                            </MudItem>
+                        </MudGrid>
+
+                        <div class="get_client_info" @onclick="(e=> ClearAllRegionValues() )">
+                            <div class="yesno_f01 get_client_info info_fc_right">Очистить все</div>
+                        </div>
+                    </div>
+                    <div class="col-md-12">
+                        @if (selectedRegion.Values != null)
+                        {
+                            <MudSelect T="RegionValue" Label="Территория обслуживания (Районы):" MultiSelection="true"
+                               @bind-Value="@selectedRegionValue"
+                               @bind-SelectedValues="@selectedRegionValues">
+
+                                @if (selectedRegion.Values != null)
+                                    @foreach (var district in selectedRegion.Values)
+                                    {
+                                        <MudSelectItem T="RegionValue" Value="@district">@district.Value</MudSelectItem>
+                                    }
+                            </MudSelect>
+                        }
+                        @foreach (var regionValue in selectedRegionValues)
+                        {
+                            <div>@regionValue.RegionName  @regionValue.Value</div>
+                        }
+
+                    </div>
+                </div>
+                <div class="region_filter_info">
+                    <div class="yesno_f01">Без фильтра <MudSwitch Class="m0p0" @bind-Checked="@filterEmployeesByRegion" Color="Color.Primary" />Фильтр по регионам</div>
+                </div>
+                <div class="row">
+                    <div class="col-md-12">
+                        <label class="input_label">Мастер(ответственный):</label>
+                        <MudGrid>
+                            <MudItem xs="12">
+                                <MudAutocomplete Variant="Variant.Outlined" Margin=MudBlazor.Margin.Dense T="Employee" Clearable="true" OnClearButtonClick="ClearExecutor"
+                                             @bind-Value="currentExecutor"
+                                             SearchFunc="@SearchExecutor"
+                                             ToStringFunc="@(e=> e==null?null : $"{e.GetFullName() + e.CalculateSkillMatching(GetEmployeeSkills(e),order.Order.Template.Skills)+ e.CalculateRegionMatching(GetEmployeeRegionValues(e),selectedRegionValues.ToList())}")" />
+                            </MudItem>
+                        </MudGrid>
+                    </div>
+                </div>
+                <div class="row" style="margin-top:20px;">
+                    <div class="col-md-12">
+                        <div style="float: right;">
+                            <MudButton Variant="Variant.Filled" Color="Color.Default" Class="button_discardChange" OnClick="@(e=> SetCurrentTab(currentTab-1) )">
+                                <MudText Class="button_discardChange_text">Назад</MudText>
+                            </MudButton>
+                            <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="button_saveChange" OnClick="@(e=> SetCurrentTab(currentTab+1) )">
+                                <MudText Class="button_saveChange_text">Далее</MudText>
+                            </MudButton>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="@(ShowHideTab((int)Tabs.Order))">
+                <h4>Поля диспетчера</h4>
+                @if (order.Fields != null && order.Fields.Count > 0)
+                {
+                    @foreach (var field in order.Fields)
+                    {
+                        <div class="row">
+                            <div class="col-md-12">
+                                <label class="input_label">@field.TemplateField.FieldName:</label>
+                                @switch (field.TemplateField.Type)
+                                {
+                                    case FieldType.FTText:
+                                        <div class="row align-items-center block_form">
+                                            <div class="col-1">
+                                                <div class="img_FTDefault img_@field.TemplateField.Type"></div>
+                                            </div>
+                                            <div class="col-11">
+                                                <input class="form_input_plnd" @bind="field.AsString" style="width:100%;" />
+                                            </div>
+                                        </div>
+                                        break;
+
+                                    case FieldType.FTFile:
+                                        <div class="row align-items-center block_form">
+                                            <div class="col-1">
+                                                <div class="img_FTDefault img_@field.TemplateField.Type"></div>
+                                            </div>
+                                            <div class="col-11">
+                                                <div class="row">
+                                                    <div class="col-12">
+                                                        <InputFile id="@field.TemplateField.Id" OnChange="(e => SetUploadedFileNames(e, field, false))" hidden />
+                                                        <MudButton HtmlTag="label" Class="btn_field_download"
+                                               Variant="Variant.Filled"
+                                               for="@field.TemplateField.Id">
+                                                            Выбрать файл
+                                                        </MudButton>
+                                                    </div>
+                                                    <div class="col-12">
+                                                        @if (field.AsFiles != null && field.AsFiles.Count > 0)
+                                                        {
+                                                            @foreach (var file in field.AsFiles)
+                                                            {
+                                                                <div class="row">
+                                                                    @if (file != null)
+                                                                    {
+                                                                        @if (file.browserFile != null) //Добавлен новый
+                                                                        {
+                                                                            <div class="col-12">
+                                                                                <div class="row">
+                                                                                    <div class="col-4 input_t01text inp_fp">(@file.browserFile.Size байт)</div>
+                                                                                    <div class="col-6 input_t01text">@file.browserFile.Name</div>
+                                                                                    <div class="col-2 input_t01text"><div class="x_icon_mini" @onclick="(e=> DeleteFile(field, file.TFile.Name))"></div></div>
+                                                                                </div>
+                                                                            </div>
+                                                                        }
+                                                                        else if (file.TFile != null) //Прочитан из бд
+                                                                        {
+                                                                            <div class="col-12">
+                                                                                <div class="row">
+                                                                                    <div class="col-4 input_t01text inp_fp">(@file.TFile.Size байт)</div>
+                                                                                    <div class="col-6 input_t01text"><a href="@file.TFile.FullPath">@file.TFile.InitialName</a></div>
+                                                                                    <div class="col-2 input_t01text"><div class="x_icon_mini" @onclick="(e=> DeleteFile(field, file.TFile.Name))"></div></div>
+                                                                                </div>
+                                                                            </div>
+                                                                        }
+                                                                    }
+                                                                </div>
+                                                            }
+                                                        }
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        break;
+
+                                    case FieldType.FTLink:
+                                        <div class="row align-items-center block_form">
+                                            <div class="col-1">
+                                                <div class="img_FTDefault img_@field.TemplateField.Type"></div>
+                                            </div>
+                                            <div class="col-11">
+                                                <input class="form_input_plnd" @bind="field.AsString" style="width:100%;" />
+                                            </div>
+                                        </div>
+                                        break;
+
+
+                                    case FieldType.FTList:
+                                        @if (field.AsDataList != null && field.AsDataList.Values != null)
+                                        {
+                                            @if (field.AsDataList.IsSingleSelection)
+                                            {
+                                                <div class="row align-items-center block_form">
+                                                    <div class="col-1">
+                                                        <div class="img_FTDefault img_@field.TemplateField.Type"></div>
+                                                    </div>
+                                                    <div class="col-11">
+                                                        <MudSelect T="DataValue" Margin=MudBlazor.Margin.Dense Variant="Variant.Outlined" MultiSelection="false"
+                                       @bind-Value="@field.AsDataList.SelectedSingleValue"
+                                       MultiSelectionTextFunc="@(new Func<List<string>, string>(GetMultiSelectionText))">
+                                                            @foreach (var item in field.AsDataList.Values)
+                                                            {
+                                                                <MudSelectItem T="DataValue" Value="@item">@item.Value</MudSelectItem>
+                                                            }
+                                                        </MudSelect>
+                                                    </div>
+                                                </div>
+
+
+                                            }
+                                            else
+                                            {
+
+
+                                                <div class="row align-items-center block_form">
+                                                    <div class="col-1">
+                                                        <div class="img_FTDefault img_@field.TemplateField.Type"></div>
+                                                    </div>
+                                                    <div class="col-11">
+                                                        <MudSelect T="DataValue" Margin=MudBlazor.Margin.Dense Variant="Variant.Outlined" MultiSelection="true" SelectAll="true" SelectAllText="Выбрать все"
+                                       @bind-SelectedValues="@field.AsDataList.SelectedValues"
+                                       MultiSelectionTextFunc="@(new Func<List<string>, string>(GetMultiSelectionText))">
+                                                            @foreach (var item in field.AsDataList.Values)
+                                                            {
+                                                                <MudSelectItem T="DataValue" Value="@item">@item.Value</MudSelectItem>
+                                                            }
+                                                        </MudSelect>
+                                                    </div>
+                                                </div>
+
+
+                                            }
+                                        }
+                                        break;
+
+                                    case FieldType.FTRuble:
+                                        <div class="row align-items-center block_form">
+                                            <div class="col-1">
+                                                <div class="img_FTDefault img_@field.TemplateField.Type"></div>
+                                            </div>
+                                            <div class="col-11">
+                                                <input class="form_input_plnd" @bind="field.AsDouble" style="width:100%;" />
+                                            </div>
+                                        </div>
+                                        break;
+
+                                    case FieldType.FTDouble:
+                                        <div class="row align-items-center block_form">
+                                            <div class="col-1">
+                                                <div class="img_FTDefault img_@field.TemplateField.Type"></div>
+                                            </div>
+                                            <div class="col-11">
+                                                <input class="form_input_plnd" @bind="field.AsDouble" style="width:100%;" />
+                                            </div>
+                                        </div>
+                                        break;
+
+                                    case FieldType.FTLong:
+                                        <div class="row align-items-center block_form">
+                                            <div class="col-1">
+                                                <div class="img_FTDefault img_@field.TemplateField.Type"></div>
+                                            </div>
+                                            <div class="col-11">
+                                                <input class="form_input_plnd" @bind="field.AsLong" style="width:100%;" />
+                                            </div>
+                                        </div>
+                                        break;
+
+
+                                    case FieldType.FTDate:
+                                        <div class="row align-items-center block_form">
+                                            <div class="col-1">
+                                                <div class="img_FTDefault img_@field.TemplateField.Type"></div>
+                                            </div>
+                                            <div class="col-11">
+                                                @*<MudDatePicker @bind-Date="field.AsDateTime" Mask="@(new DateMask("00.00.0000"))" DateFormat="dd-MM-yyyy" Editable="false" Margin=MudBlazor.Margin.Dense Variant="Variant.Outlined" />*@
+                                                <RadzenDatePicker ShowTime="true" @bind-Value="field.AsDateTime" DateFormat="dd.MM.yyyy HH:mm" class="form_input_radzen_dt" Style="margin-top: 3px;" />
+                                            </div>
+                                        </div>
+                                        break;
+
+
+
+                                    case FieldType.FTDateTime:
+                                        <div class="row align-items-center block_form">
+                                            <div class="col-1">
+                                                <div class="img_FTDefault img_@field.TemplateField.Type"></div>
+                                            </div>
+                                            <div class="col-11">
+                                                <div class="row">
+                                                    <div class="col-6">
+                                                        @*<MudDatePicker @bind-Date="field.AsDateTime" Mask="@(new DateMask("00.00.0000"))" DateFormat="dd-MM-yyyy" Editable="false" Margin=MudBlazor.Margin.Dense Variant="Variant.Outlined" />*@
+                                                        <RadzenDatePicker ShowTime="true" @bind-Value="field.AsDateTime" DateFormat="dd.MM.yyyy" class="form_input_radzen_dt" Style="margin-top: 3px;" />
+                                                    </div>
+                                                    <div class="col-6">
+                                                        <MudTimePicker @bind-Time="field.AsTimeSpan" Editable="false" Margin=MudBlazor.Margin.Dense Variant="Variant.Outlined" />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+
+                                        break;
+
+
+
+                                    default:
+                                        ShowNotification(Severity.Error, "Неверный тип поля");
+                                        break;
+                                }
+
+                            </div>
+                        </div>
+                    }
+                }
+                <div class="row" style="margin-top:20px;">
+                    <div class="col-md-12">
+                        <div style="float: right;">
+                            <MudButton Variant="Variant.Filled" Color="Color.Default" Class="button_discardChange" OnClick="@(e=> SetCurrentTab(currentTab-1) )">
+                                <MudText Class="button_discardChange_text">Назад</MudText>
+                            </MudButton>
+                            <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="button_saveChange" OnClick="@(e=> SetCurrentTab(currentTab+1) )">
+                                <MudText Class="button_saveChange_text">Далее</MudText>
+                            </MudButton>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="@(ShowHideTab((int)Tabs.Report))">
+                <h4>Поля Мастера(Исполнителя)</h4>
+                @if (order.ExecutorFields != null && order.ExecutorFields.Count > 0)
+                {
+                    @foreach (var field in order.ExecutorFields)
+                    {
+                        <div class="row">
+                            <div class="col-md-12">
+                                <label class="input_label">@field.TemplateField.FieldName:</label>
+                                @switch (field.TemplateField.Type)
+                                {
+                                    case FieldType.FTText:
+
+                                        <div class="row align-items-center block_form">
+                                            <div class="col-1">
+                                                <div class="img_FTDefault img_@field.TemplateField.Type"></div>
+                                            </div>
+                                            <div class="col-11">
+                                                <input class="form_input_plnd" @bind="field.AsString" style="width:100%;" />
+                                            </div>
+                                        </div>
+
+
+                                        break;
+
+
+                                    case FieldType.FTFile:
+
+                                        <div class="row align-items-center block_form">
+                                            <div class="col-1">
+                                                <div class="img_FTDefault img_@field.TemplateField.Type"></div>
+                                            </div>
+                                            <div class="col-11">
+                                                <div class="row">
+                                                    <div class="col-12">
+                                                        <InputFile id="@field.TemplateField.Id" OnChange="(e => SetUploadedFileNames(e, field, false))" hidden />
+                                                        <MudButton HtmlTag="label" Class="btn_field_download"
+                                               Variant="Variant.Filled"
+                                               for="@field.TemplateField.Id">
+                                                            Выбрать файл
+                                                        </MudButton>
+                                                    </div>
+                                                    <div class="col-12">
+                                                        @if (field.AsFiles != null && field.AsFiles.Count > 0)
+                                                        {
+                                                            @foreach (var file in field.AsFiles)
+                                                            {
+                                                                <div class="row">
+                                                                    @if (file != null)
+                                                                    {
+                                                                        @if (file.browserFile != null) //Добавлен новый
+                                                                        {
+                                                                            <div class="col-12">
+                                                                                <div class="row">
+                                                                                    <div class="col-4 input_t01text inp_fp">(@file.browserFile.Size байт)</div>
+                                                                                    <div class="col-6 input_t01text">@file.browserFile.Name</div>
+                                                                                    <div class="col-2 input_t01text"><div class="x_icon_mini" @onclick="(e=> DeleteFile(field, file.TFile.Name))"></div></div>
+                                                                                </div>
+                                                                            </div>
+                                                                        }
+                                                                        else if (file.TFile != null) //Прочитан из бд
+                                                                        {
+                                                                            <div class="col-12">
+                                                                                <div class="row">
+                                                                                    <div class="col-4 input_t01text inp_fp">(@file.TFile.Size байт)</div>
+                                                                                    <div class="col-6 input_t01text"><a href="@file.TFile.FullPath">@file.TFile.InitialName</a></div>
+                                                                                    <div class="col-2 input_t01text"><div class="x_icon_mini" @onclick="(e=> DeleteFile(field, file.TFile.Name))"></div></div>
+                                                                                </div>
+                                                                            </div>
+                                                                        }
+                                                                    }
+                                                                </div>
+                                                            }
+                                                        }
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+
+                                        break;
+
+
+
+                                    case FieldType.FTLink:
+                                        <div class="row align-items-center block_form">
+                                            <div class="col-1">
+                                                <div class="img_FTDefault img_@field.TemplateField.Type"></div>
+                                            </div>
+                                            <div class="col-11">
+                                                <input class="form_input_plnd" @bind="field.AsString" style="width:100%;" />
+                                            </div>
+                                        </div>
+
+                                        break;
+
+
+
+                                    case FieldType.FTList:
+                                        @if (field.AsDataList != null && field.AsDataList.Values != null)
+                                        {
+                                            @if (field.AsDataList.IsSingleSelection)
+                                            {
+
+                                                <div class="row align-items-center block_form">
+                                                    <div class="col-1">
+                                                        <div class="img_FTDefault img_@field.TemplateField.Type"></div>
+                                                    </div>
+                                                    <div class="col-11">
+                                                        <MudSelect T="DataValue" Margin=MudBlazor.Margin.Dense Variant="Variant.Outlined" MultiSelection="false"
+                                       @bind-Value="@field.AsDataList.SelectedSingleValue"
+                                       MultiSelectionTextFunc="@(new Func<List<string>, string>(GetMultiSelectionText))">
+                                                            @foreach (var item in field.AsDataList.Values)
+                                                            {
+                                                                <MudSelectItem T="DataValue" Value="@item">@item.Value</MudSelectItem>
+                                                            }
+                                                        </MudSelect>
+                                                    </div>
+                                                </div>
+
+
+                                            }
+                                            else
+                                            {
+
+                                                <div class="row align-items-center block_form">
+                                                    <div class="col-1">
+                                                        <div class="img_FTDefault img_@field.TemplateField.Type"></div>
+                                                    </div>
+                                                    <div class="col-11">
+                                                        <MudSelect T="DataValue" Margin=MudBlazor.Margin.Dense Variant="Variant.Outlined" MultiSelection="true" SelectAll="true" SelectAllText="Выбрать все"
+                                       @bind-SelectedValues="@field.AsDataList.SelectedValues"
+                                       MultiSelectionTextFunc="@(new Func<List<string>, string>(GetMultiSelectionText))">
+                                                            @foreach (var item in field.AsDataList.Values)
+                                                            {
+                                                                <MudSelectItem T="DataValue" Value="@item">@item.Value</MudSelectItem>
+                                                            }
+                                                        </MudSelect>
+                                                    </div>
+                                                </div>
+
+
+                                            }
+                                        }
+                                        break;
+
+
+                                    case FieldType.FTRuble:
+                                        <div class="row align-items-center block_form">
+                                            <div class="col-1">
+                                                <div class="img_FTDefault img_@field.TemplateField.Type"></div>
+                                            </div>
+                                            <div class="col-11">
+                                                <input class="form_input_plnd" @bind="field.AsDouble" style="width:100%;" />
+                                            </div>
+                                        </div>
+                                        break;
+
+                                    case FieldType.FTDouble:
+                                        <div class="row align-items-center block_form">
+                                            <div class="col-1">
+                                                <div class="img_FTDefault img_@field.TemplateField.Type"></div>
+                                            </div>
+                                            <div class="col-11">
+                                                <input class="form_input_plnd" @bind="field.AsDouble" style="width:100%;" />
+                                            </div>
+                                        </div>
+                                        break;
+
+
+
+                                    case FieldType.FTLong:
+                                        <div class="row align-items-center block_form">
+                                            <div class="col-1">
+                                                <div class="img_FTDefault img_@field.TemplateField.Type"></div>
+                                            </div>
+                                            <div class="col-11">
+                                                <input class="form_input_plnd" @bind="field.AsLong" style="width:100%;" />
+                                            </div>
+                                        </div>
+
+                                        break;
+
+
+
+
+                                    case FieldType.FTDate:
+                                        <div class="row align-items-center block_form">
+                                            <div class="col-1">
+                                                <div class="img_FTDefault img_@field.TemplateField.Type"></div>
+                                            </div>
+                                            <div class="col-11">
+                                                @*<MudDatePicker @bind-Date="field.AsDateTime" Mask="@(new DateMask("00.00.0000"))" DateFormat="dd-MM-yyyy" Editable="false" Margin=MudBlazor.Margin.Dense Variant="Variant.Outlined" />*@
+                                                <RadzenDatePicker ShowTime="true" @bind-Value="field.AsDateTime" DateFormat="dd.MM.yyyy" class="form_input_radzen_dt" Style="margin-top: 3px;" />
+                                            </div>
+                                        </div>
+
+                                        break;
+
+
+
+                                    case FieldType.FTDateTime:
+                                        <div class="row align-items-center block_form">
+                                            <div class="col-1">
+                                                <div class="img_FTDefault img_@field.TemplateField.Type"></div>
+                                            </div>
+                                            <div class="col-11">
+                                                <div class="row">
+                                                    <div class="col-6">
+                                                        @*<MudDatePicker @bind-Date="field.AsDateTime" Mask="@(new DateMask("00.00.0000"))" DateFormat="dd-MM-yyyy" Editable="false" Margin=MudBlazor.Margin.Dense Variant="Variant.Outlined" />*@
+                                                        <RadzenDatePicker ShowTime="true" @bind-Value="field.AsDateTime" DateFormat="dd.MM.yyyy" class="form_input_radzen_dt" Style="margin-top: 3px;" />
+                                                    </div>
+                                                    <div class="col-6">
+                                                        <MudTimePicker @bind-Time="field.AsTimeSpan" Editable="false" Margin=MudBlazor.Margin.Dense Variant="Variant.Outlined" />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+
+                                        break;
+
+
+
+                                    case FieldType.FTPhoto:
+                                        <div class="row align-items-center block_form">
+                                            <div class="col-1">
+                                                <div class="img_FTDefault img_@field.TemplateField.Type"></div>
+                                            </div>
+                                            <div class="col-11">
+                                                <div class="row">
+                                                    <div class="col-12">
+                                                        <InputFile id="@field.TemplateField.Id" OnChange="(e => SetUploadedFileNames(e, field, true))" hidden multiple accept="image/*" />
+                                                        <MudButton HtmlTag="label" Class="btn_field_download"
+                                               Variant="Variant.Filled"
+                                               for="@field.TemplateField.Id">
+                                                            Выбрать фото
+                                                        </MudButton>
+                                                    </div>
+                                                    <div class="col-12">
+                                                        @if (field.AsFiles != null && field.AsFiles.Count > 0)
+                                                        {
+                                                            @foreach (var file in field.AsFiles)
+                                                            {
+                                                                <div class="row">
+                                                                    @if (file != null)
+                                                                    {
+                                                                        @if (file.browserFile != null) //Добавлен новый
+                                                                        {
+                                                                            <div class="col-12">
+                                                                                <div class="row">
+                                                                                    <div class="col-4 input_t01text inp_fp">(@file.browserFile.Size байт)</div>
+                                                                                    <div class="col-6 input_t01text">@file.browserFile.Name</div>
+                                                                                    <div class="col-2 input_t01text"><div class="x_icon_mini" @onclick="(e=> DeleteFile(field, file.TFile.Name))"></div></div>
+                                                                                </div>
+                                                                            </div>
+                                                                        }
+                                                                        else if (file.TFile != null) //Прочитан из бд
+                                                                        {
+                                                                            <div class="col-12">
+                                                                                <div class="row">
+                                                                                    <div class="col-4 input_t01text inp_fp">(@file.TFile.Size байт)</div>
+                                                                                    <div class="col-6 input_t01text"><a href="@file.TFile.FullPath">@file.TFile.InitialName</a></div>
+                                                                                    <div class="col-2 input_t01text"><div class="x_icon_mini" @onclick="(e=> DeleteFile(field, file.TFile.Name))"></div></div>
+                                                                                </div>
+                                                                            </div>
+                                                                        }
+                                                                    }
+                                                                </div>
+                                                            }
+                                                        }
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+
+                                        break;
+
+
+
+                                    case FieldType.FTYesNo:
+                                        <div class="row align-items-center block_form">
+                                            <div class="col-1">
+                                                <div class="img_FTDefault img_@field.TemplateField.Type"></div>
+                                            </div>
+                                            <div class="col-11">
+                                                <div class="yesno_f01">Нет <MudSwitch Class="m0p0" @bind-Checked="@field.AsBool" Color="Color.Primary" />Да</div>
+                                            </div>
+                                        </div>
+
+
+                                        break;
+
+                                    default:
+                                        ShowNotification(Severity.Error, "Неверный тип поля");
+                                        break;
+                                }
+
+                            </div>
+                        </div>
+                    }
+                }
+                <div class="row" style="margin-top:20px;">
+                    <div class="col-md-12">
+
+                        @if (id != null)
+                        {
+                            <MudButton Disabled="@_processing" Variant="Variant.Filled" Class="button_deleteChange" OnClick="@(e=>OpenDialogDelete(order.Order.Id, order.Order.OrderName))">
+                                @if (_processing)
+                                {
+                                    <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                                    <MudText Class="ms-2">Processing</MudText>
+                                }
+                                else
+                                {
+                                    <MudText Class="button_saveChange_text">Удалить</MudText>
+                                }
+                            </MudButton>
+                        }
+
+                        <div style="float: right;">
+                            <MudButton Variant="Variant.Filled" Color="Color.Default" Class="button_discardChange" OnClick="@(e=> SetCurrentTab(currentTab-1) )">
+                                <MudText Class="button_discardChange_text">Назад</MudText>
+                            </MudButton>
+                            <MudButton Disabled="@_processing" Variant="Variant.Filled" Class="button_saveChange" OnClick="@(e=>Save())">
+                                @if (_processing)
+                                {
+                                    <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                                    <MudText Class="ms-2">Processing</MudText>
+                                }
+                                else
+                                {
+                                    <MudText Class="button_saveChange_text">Сохранить</MudText>
+                                }
+                            </MudButton>
+                        </div>
+
+
+                    </div>
+                </div>
+                <div class="row" style="margin-top:20px;">
+                    <div class="history_header" @onclick="(()=>ShowHideHistory())">
+                        История изменений
+                        <div class="@historyArrowClass"></div>
+                    </div>
+                    @if (isShowHistory)
+                    {
+                        <div class="history overflow-auto">
+                            @foreach (var oneHistory in history)
+                            {
+                                <div class="history_row">
+                                    <span>@TimeZoneInfo.ConvertTimeBySystemTimeZoneId(oneHistory.HistoryObject.LastUpdateTime.Value, "Europe/Moscow")/</span>
+                                    <strong>@oneHistory.HistoryObject.UserLastUpdate</strong>
+                                    <span>@oneHistory.ChangesToString()</span>
+                                </div>
+
+                            }
+                        </div>
+                    }
+                </div>
+                <div class="row" style="margin-top:20px;">
+                    @if(!string.IsNullOrEmpty(order.Order.Creator))
+                    {
+                        <div>Создал: @order.Order.Creator</div>
+                    }
+                    @if(order.Order.CreateTime != null)
+                    {
+                        <div>Дата создания: @TimeZoneInfo.ConvertTimeBySystemTimeZoneId(order.Order.CreateTime.Value, "Europe/Moscow")</div>
+                    }
+                    @if(order.Order.StopTime != null)
+                    {
+                        <div>Дата завершения заявки монтажником: @TimeZoneInfo.ConvertTimeBySystemTimeZoneId(order.Order.StopTime.Value, "Europe/Moscow")</div>                        
+                    }
+                    @if(!string.IsNullOrEmpty(order.Order.UserLastUpdate))
+                    {
+                        <div>Изменил: @order.Order.UserLastUpdate</div>
+                    }
+                    @if(order.Order.LastUpdateTime != null)
+                    {
+                        <div>Дата последнего изменения: @TimeZoneInfo.ConvertTimeBySystemTimeZoneId(order.Order.LastUpdateTime.Value, "Europe/Moscow")</div>
+                    }
+                </div>
+            </div>
+
+
+
+
+        </div>
+
+        @if (isShowClientForm)
+        {
+            <div class="col-10 d-none d-sm-block col-xxl-6 my_form">
+                <ClientPage OnClientResult="@SetClientFromClientPage"></ClientPage>
+            </div>
+        }
+
+    </div>
+}
+else
+{
+    <h4>Заказ не найден. Возможно он был удален.</h4>
+}
+
+
+@code
+{
+
+    public string ShowHideTab(int inputTab)
+    {
+        if (currentTab != inputTab)
+        {
+            return "my_hidden";
+        }
+        else
+        {
+            return string.Empty;
+        }
+    }
+
+    private void SetClientFromClientPage(Client value)
+    {
+        currentClient = value;
+        GetInfoFromCurrentClient();
+    }
+
+
+    [CascadingParameter]
+    private Task<AuthenticationState> authenticationStateTask { get; set; }
+
+    private int currentTab = (int)Tabs.Description;
+    private void SetCurrentTab(int tabInt)
+    {
+        //isShowClientForm = false; //Убрать закрывание при смене вкладок
+        currentTab = tabInt;
+    }
+    public enum Tabs
+    {
+        Description,
+        Client,
+        Executor,
+        Order,
+        Report,
+    }
+
+    public bool filterEmployeesByRegion = false;//Фильтровать сотрудников по регионам
+
+    [Parameter]
+    [SupplyParameterFromQuery]
+    public string id { get; set; }
+
+    [Parameter]
+    [SupplyParameterFromQuery]
+    public string template { get; set; } //id
+
+    public OrderView order;
+    private OrderTemplate orderTemplate;
+    private void GetOrderTemplate(string id)
+    {
+        orderTemplate = orderTemplateService.GetOne(id);
+
+        //Просто сортировка
+        if (orderTemplate.Fields != null && orderTemplate.Fields.Count > 0)
+        {
+            orderTemplate.Fields = orderTemplate.Fields.OrderBy(x => x.Position).ToList();
+        }
+        //Просто сортировка
+        if (orderTemplate.ExecutorFields != null && orderTemplate.ExecutorFields.Count > 0)
+        {
+            orderTemplate.ExecutorFields = orderTemplate.ExecutorFields.OrderBy(x => x.Position).ToList();
+        }
+    }
+
+    public bool isNotifyExecutor = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        //Проверить юзера на магазин
+        //Если он магазин проверить что заказ который он создал магазинный!!!
+
+        GetDictionaries();
+        GetOrderTypes();
+        GetСancellationReasons();
+        GetAllEmployees();
+        GetSkills();
+        ////GetExecutors();
+
+        ////GetOrdersByExecutorId();//DEBUG
+
+
+
+        if (!string.IsNullOrWhiteSpace(id) && id.Length == 24)
+        {
+            Edit(id); //GetOrderTemplate(template); будет получен внутри
+            GetHistory();
+        }
+        else
+        {
+            //new
+            if (!string.IsNullOrWhiteSpace(template) && template.Length == 24)
+            {
+                New();
+            }
+            else
+            {
+                ShowNotification(Severity.Error, "ШАБЛОН НЕ ПЕРЕДАН");
+                //Console.Beep(3000, 100);
+            }
+        }
+    }
+
+    private void CloseWindow()
+    {
+        NavigationManager.NavigateTo("/orders");
+    }
+
+
+    private List<OrderStatus> statuses = OrderStatus.statuses;
+
+    //РЕГИОНЫ
+    private Region selectedRegion = new Region();
+    private async Task<IEnumerable<Region>> SearchRegion(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            //return null;
+            return regionService.GetAll().Where(x => !string.IsNullOrEmpty(x.RegionName)).Take(20);
+        }
+
+        var response = regionService.GetAll();
+        var match = response.FindAll(x => !string.IsNullOrEmpty(x.RegionName) && x.RegionName.ToLower().Contains(value.ToLower()));
+
+        return match;
+    }
+
+    private List<Region> regions = new List<Region>();
+    private void GetRegions()
+    {
+        regions = regionService.GetAll().ToList();
+    }
+    //Значения выбранных регионов
+    //@bind-Value="@selectedRegion"
+    //@bind-SelectedValues="selectedRegions"
+    private RegionValue selectedRegionValue = new();
+    private IEnumerable<RegionValue> selectedRegionValues { get; set; } = new HashSet<RegionValue>();
+    private string GetMultiSelectionTextRegionValues(List<string> selectedValues)
+    {
+        return $"Выбрано районов: {selectedValues.Count}";
+    }
+    public void ClearRegion()
+    {
+        selectedRegion = new Region();
+    }
+    private void ClearAllRegionValues()
+    {
+        selectedRegion = new Region();
+        selectedRegionValues = new HashSet<RegionValue>();
+    }
+    //
+    //
+    private bool isHideAllSkills = true;
+    private void ShowHideSkills()
+    {
+        isHideAllSkills = !isHideAllSkills;
+    }
+    //private Skill selectedSkill = new Skill();
+    //private IEnumerable<Skill> selectedSkills { get; set; } = new HashSet<Skill>();
+    private List<Skill> skills = new List<Skill>();
+    private void OnChangeSkills(object value, string name)
+    {
+        var str = value is IEnumerable<int> ? string.Join(", ", (IEnumerable<int>)value) : value;
+    }
+
+    private string GetMultiSelectionText(List<string> selectedValues)
+    {
+        return $"Выбрано: {selectedValues.Count}";
+    }
+    private void GetSkills()
+    {
+        skills = skillService.GetAll().OrderBy(x => x.Position).ToList();
+    }
+    public List<Skill> GetEmployeeSkills(Employee employee)
+    {
+        //List<string> ids = employee.Skills;
+        //List<Skill> employeeSkills = new();
+        //foreach (var skill in skills)
+        //{
+        //    if (ids.Contains(skill.Id))
+        //    {
+        //        employeeSkills.Add(skill);
+        //    }
+        //}
+        return employee.Skills;
+    }
+    public List<RegionValue>? GetEmployeeRegionValues(Employee employee)
+    {
+        return employee.Regions;
+    }
+
+
+    private List<Models.DataList> dictionaries;
+    private void GetDictionaries()
+    {
+        dictionaries = dataListService.GetAll();
+    }
+
+    //private OrderType orderType;
+    private List<OrderType> orderTypes = new List<OrderType>();
+    private void GetOrderTypes()
+    {
+        orderTypes = orderTypeService.GetAll().OrderBy(x => x.Position).ToList();
+    }
+    private void ClearOrderType()
+    {
+        //orderType = null;
+        order.Order.Template.OrderType = null;
+    }
+    private void OnChangeOrderType(object value, string name)
+    {
+        var str = value is IEnumerable<int> ? string.Join(", ", (IEnumerable<int>)value) : value;
+    }
+
+    private Client currentClient;//выбранный клиент
+    private async Task<IEnumerable<Client>> SearchClient(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            //return null;
+            return clientService.GetAll().Where(x => x.GetFullName() != null).Take(20);
+        }
+
+        var response = clientService.GetAll();
+        var match = response.FindAll(x => x.GetFullName() != null && x.GetFullName().ToLower().Contains(value.ToLower()));
+
+        return match;
+    }
+    private void ClearClient()
+    {
+        currentClient = null;// new();
+    }
+    private bool isShowClientForm = false;
+    private void ShowHideClientForm()
+    {
+        isShowClientForm = !isShowClientForm;
+    }
+
+
+    //Получить Адреса и Контакты из Клиента
+    private async Task GetInfoFromCurrentClient()
+    {
+        try
+        {
+            if (currentClient == null)
+            {
+                ShowNotification(Severity.Warning, "Клиент не установлен");
+                return;
+            }
+
+            currentClient = clientService.GetOne(currentClient.Id);
+            if (currentClient.Address != null)
+            {
+                address = currentClient.Address;
+            }
+
+            if (contacts == null)
+            {
+                contacts = new();
+            }
+            contacts.Clear();
+
+            if (currentClient.Contacts != null)
+            {
+                contacts = currentClient.Contacts;
+            }
+            if (currentClient.ClientType.TypeId == "Physical" && currentClient.ClientPhone != null)
+            {
+                contacts.All(x => x.IsMain = false);
+                contacts.Insert(0, new ClientContact(currentClient.GetFullName(), currentClient.ClientPhone, currentClient.ClientMail, true));
+            }
+
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            ShowNotification(Severity.Warning, "Невозможно получить данные");
+            return;
+        }
+    }
+
+    private List<ClientContact> contacts = new List<ClientContact>() { new ClientContact(true) };
+    private void AddContact()
+    {
+        contacts.Add(new ClientContact());
+    }
+    private void DeleteContact(ClientContact contact)
+    {
+        contacts.Remove(contact);
+    }
+
+    private Address address = new Address();
+
+    public List<Employee> allEmployees = new();
+    public void GetAllEmployees()
+    {
+        allEmployees = employeeService.GetAll().Where(x => x.GetFullName() != null && x.IsActive == true).ToList();
+    }
+    private List<Employee> FilterEmployee(List<Employee> inputEmployees)
+    {
+        HashSet<Employee> returnEmployees = new();
+        foreach (var employee in inputEmployees)
+        {
+            if (employee.Regions != null)
+            {
+                foreach (var employeeRegionValue in employee.Regions)
+                {
+                    foreach (var regionValue in selectedRegionValues.ToList())
+                    {
+                        if (employeeRegionValue.Equals(regionValue))
+                        {
+                            returnEmployees.Add(employee);
+                        }
+                    }
+                }
+            }
+        }
+        return returnEmployees.ToList();
+    }
+    private Employee currentExecutor;//выбранный исполнитель(мастер) (ответственный)
+    private async Task<IEnumerable<Employee>> SearchExecutor(string value)
+    {
+
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            var employees = allEmployees.Take(20);
+            if (filterEmployeesByRegion == true)
+                employees = FilterEmployee(employees.ToList());
+
+            return employees;
+        }
+
+        var match = allEmployees.FindAll(x => x.GetFullName() != null && x.GetFullName().ToLower().Contains(value.ToLower()));
+        if (filterEmployeesByRegion == true)
+            match = FilterEmployee(match);
+
+        return match;
+    }
+    private void ClearExecutor()
+    {
+        currentExecutor = null;//new();
+    }
+
+
+    private bool isShowHistory = false;
+    private string historyArrowClass = "history_arrow_top";
+    private void ShowHideHistory()
+    {
+        isShowHistory = !isShowHistory;
+        if (isShowHistory)
+        {
+            historyArrowClass = "history_arrow_bottom";
+        }
+        else
+        {
+            historyArrowClass = "history_arrow_top";
+        }
+
+    }
+    private List<HistoryModel<Order>> history = new();
+    private HistoryModel<Order> selectedHistory;// = new();
+    public void GetHistory()
+    {
+        try
+        {
+            history = orderService.GetTopHistory(order.Order.Id);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("OrderPageTest_GetHistory()_Exception: " + ex.Message);
+        }
+    }
+
+    private async Task<string> Validation()
+    {
+        //!Название Заказа не нужно
+        //if (string.IsNullOrWhiteSpace(order.Order.OrderName))
+        //{
+        //    ShowNotification(Severity.Warning, "Не задано название заказа");
+        //    return Utils.ValidationCode.EmptyName;
+        //}
+
+        List<TemplateFieldView> allFields = new();
+        if (order.Fields != null)
+        {
+            allFields.AddRange(order.Fields.Where(x => x.TemplateField.Selector == "myselector").ToList());
+        }
+        if (order.ExecutorFields != null)
+        {
+            allFields.AddRange(order.ExecutorFields.Where(x => x.TemplateField.Selector == "myselector").ToList());
+        }
+
+        //У диспетчер пока нет обязательных полей. Все опциональные
+        ////Проверить чтобы у всех полей где должно быть обязательное значение были заполнены
+        //int countRequired = 0;
+        int count0 = 0; //количество числовых полей со значением 0
+        foreach (var field in allFields)
+        {
+            ////Проверка обязательных
+            //if (field.TemplateField.Required == true && field.TemplateField.Value == null)
+            //{
+            //    countRequired++;
+            //}
+
+            //Проверка числовых на null и 0
+            if (field.TemplateField.Type.Equals("FTLong") || field.TemplateField.Type.Equals("FTRuble") || field.TemplateField.Type.Equals("FTDouble"))
+            {
+                if (field.TemplateField._value == null)
+                {
+                    count0++;
+                }
+                if (field.TemplateField.Type.Equals("FTRuble") || field.TemplateField.Type.Equals("FTDouble"))
+                {
+                    if (field.AsDouble == null || field.AsDouble == 0)
+                    {
+                        count0++;
+                    }
+                }
+                if (field.TemplateField.Type.Equals("FTLong"))
+                {
+                    if (field.AsLong == null || field.AsLong == 0)
+                    {
+                        count0++;
+                    }
+                }
+            }
+
+        }
+
+        if (count0 > 0)
+        {
+            //Убрать алерт о незаполненных данных 07.03.23
+            /*
+            //ShowNotification(Severity.Warning, "В числовые поля установлено значение 0");
+            var options = new DialogOptions { CloseOnEscapeKey = true };
+            var dialog = DialogService.Show<Dialog>("Числовые поля не заполнены или установлено значение: 0. Продолжить создание заказа?", options);
+
+
+            var result = await dialog.Result;
+                if (result.Cancelled)
+                {
+                ShowNotification(Severity.Info, "Создание заказа приостанавлено");
+                return Utils.ValidationCode.EmptyFieldsValues;
+            }
+            */
+
+        }
+        //if (countRequired > 0)
+        //{
+        //    ShowNotification(Severity.Warning, "Не все обязательные поля заполнены");
+        //    return Utils.ValidationCode.EmptyFieldsValues;
+        //}
+
+
+        return ValidationCode.ValidationSuccess;
+    }
+
+    //Причины отмены
+    private List<CancellationReason>? cancellationReasons;
+    private void GetСancellationReasons()
+    {
+        cancellationReasons = cancellationReasonService.GetAll();
+    }
+    private void ClearCancellationReason()
+    {
+        order.Order.CancellationReason = null;
+    }
+
+    //Старый статус
+    private OrderStatus? oldStatus = null;
+
+    private async void New()
+    {
+        GetOrderTemplate(template);
+        if (orderTemplate != null)
+        {
+            order = new OrderView(new Order(orderTemplate));
+
+            //СтатусЗаказа
+            order.Order.OrderStatus = OrderStatus.NEW;
+
+            //Тип Заказа(Отностися к шаблону)(в шаблоне string во view OrderType) (тут загрузит из шаблона)
+            if (order.Order.Template.OrderType != null)
+            {
+                order.OrderType = orderTypes.FirstOrDefault(x => x.TypeName == order.Order.Template.OrderType); //Найти тип по имени и выбрать его
+            }
+
+            //Описание Возьмется из Шаблона
+        }
+        else
+        {
+            ShowNotification(Severity.Error, "ШАБЛОН НЕ ПЕРЕДАН");
+            //Console.Beep(1000, 100);
+        }
+    }
+
+    //(для случаев когда адм поменял шаблон а у диспетчера открыта страница со старым шаблоном)
+    private bool CheckTemplateRelevance()
+    {
+        //Console.WriteLine("Время из текущего Шаблона: " + order.Order.Template.LastUpdateTime);
+        //Console.WriteLine("Время Шаблона из базы: " + orderTemplateService.GetOne(order.Order.Template.Id).LastUpdateTime);
+        if (order.Order.Template.LastUpdateTime == orderTemplateService.GetOne(order.Order.Template.Id).LastUpdateTime)
+        {
+            return true;
+        }
+        return false;
+    }
+
+
+    private async void Save()
+    {
+        try
+        {
+            _processing = true; await Task.Delay(1);
+
+            order.SaveViewDataToModelData();
+
+
+            order.Order.Client = currentClient;
+
+            //Адрес
+            order.Order.Address = address;
+
+            //Контакты
+            order.Order.Contacts = contacts;
+            if (contacts.Count == 1 && string.IsNullOrWhiteSpace(contacts[0].Phone) && string.IsNullOrWhiteSpace(contacts[0].ClientContactName) && contacts[0].IsMain == true)
+            {
+                order.Order.Contacts = null;
+            }
+
+            //РЕГИОНЫ(Районы)
+            if (selectedRegionValues != null && selectedRegionValues.ToList().Count > 0)
+            {
+                order.Order.Regions = selectedRegionValues.ToList();
+            }
+            else { order.Order.Regions = null; }
+
+            //Исполнитель(Мастер)
+            bool isNotifyOldExecutor = false;
+            Employee? oldExecutor = order.Order.OrderEmployeeExecutor; //прежний исполнитель(мастер)
+            if (currentExecutor != null && oldExecutor != null && !oldExecutor.Id.Equals(currentExecutor.Id))
+                isNotifyOldExecutor = true;
+
+            //////Статус
+            ////var oldStatus = order.Order.OrderStatus;
+            ////if (order.Order.OrderStatus != null)
+            ////    order.Order.OrderStatus = currentOrderStatus;
+
+            //ЗанулитьПричиныОтмены если статус не Отменено
+            if (!order.Order.OrderStatus.Equals(OrderStatus.CANCELED))
+            {
+                order.Order.CancellationReason = null;
+            }
+
+            order.Order.OrderEmployeeExecutor = currentExecutor;
+
+            var validation = await Validation();
+            if (validation != ValidationCode.ValidationSuccess)
+            {
+                return;
+            }
+
+            var uploadResult = await UploadFiles();
+            if (uploadResult == false)
+            {
+                ShowNotification(Severity.Error, "Не удалось загрузить файлы");
+                return;
+            }
+
+            //Нумерация
+            if (order.Order.OrderNum == null)
+            {
+                order.Order.OrderNum = orderService.GetAll().Max(x => x.OrderNum) + 1;
+                //order.Order.OrderNum = orderService.GetAll().Where(x => x.OrderNumPrefix.Equals(currentPrefix)).Max(x => x.OrderNum) + 1; Каждый Год обнуление счетчика
+                if (order.Order.OrderNum == null) { order.Order.OrderNum = 0; }
+            }
+            if (string.IsNullOrWhiteSpace(order.Order.OrderName))
+            {
+                if (!string.IsNullOrEmpty(order.Order.OrderNumPrefix))
+                {
+                    order.Order.OrderName = order.Order.OrderNumPrefix + "_" + order.Order.OrderNum.ToString();
+                }
+                else
+                {
+                    order.Order.OrderName = order.Order.OrderNum.ToString();
+                }
+            }
+
+            //Создал Изменил Дата создания/изменения
+            if (string.IsNullOrEmpty(order.Order.Creator))
+            {
+                order.Order.Creator = authenticationStateTask?.Result?.User?.Identity?.Name;
+            }
+            if (order.Order.CreateTime == null)
+            {
+                order.Order.CreateTime = DateTime.Now;
+            }
+            order.Order.UserLastUpdate = authenticationStateTask?.Result?.User?.Identity?.Name;
+            order.Order.LastUpdateTime = DateTime.Now;
+            //
+
+            //Если ДИспетечеруразрешено будет менять статус
+            if (order.Order.OrderStatus.Equals(OrderStatus.NEW))
+            {
+                order.Order.RoadTimeStart = null;
+                order.Order.RoadTimeStop = null;
+                order.Order.StartTime = null;
+                order.Order.StopTime = null;
+
+                if (order.Order.OrderEmployeeExecutor != null && order.Order.OrderStatus != null)
+                {
+                    if (!order.Order.OrderStatus.Equals(oldStatus) || !order.Order.OrderStatus.Equals(OrderStatus.NEW))
+                    {
+                        order.Order.OrderEmployeeExecutor.AssignedCounter++;//Увеличить счетчик назначенных заказов
+                        employeeService.SaveOrUpdateWithoutHistory(order.Order.OrderEmployeeExecutor);
+                    }
+                }
+            }
+
+            if (isNotifyExecutor) //снять прочитано исполнителем если стоит уведомить исполнителя==true
+            {
+                order.Order.IsReadByExecutor = false;
+            }
+
+            //Проверяем актуальность шаблона перед сохранением
+            if (CheckTemplateRelevance() == false)
+            {
+                ShowNotification(Severity.Warning, "Шаблон этого заказы был изменен. Пожалуйста обновите страницу");
+                return;
+            }
+
+
+            //!!! 26.04.23 Дата создания и ЗАвершения заявки должны проставляться автоматически
+            //Пока моб версия не работает эти поля заполняются диспетчером(по времени UTC +3)
+            //Сместить на -3 чтобы серверное время было верным
+            //order.Order.CreateDateTime
+            //order.Order.StopTime
+
+            orderService.SaveOrUpdate(order.Order);
+            //orderService.SaveOrUpdateWithoutHistory(order.Order);
+
+            if (isNotifyExecutor && order.Order.OrderEmployeeExecutor != null) //уведомить исполнителя
+            {
+                string title = string.Empty;
+                if (order.Order.OrderStatus.Equals(OrderStatus.NEW))
+                {
+                    title = "Новая заявка";
+                }
+                else { title = "Заявка изменена"; }
+
+                await rabbit.SendMessageToQueues("", order.Order.OrderEmployeeExecutor.Id,
+                new OrderDataMessage(orderId: order.Order.Id,
+                    orderName: order.Order.OrderName, statusName:
+                    order.Order.OrderStatus.StatusName, eventName: "",
+                    title: title));
+            }
+
+            //Уведомить Прежнего Исполнителя(Всегда уведомлять)
+            if (isNotifyOldExecutor == true)
+            {
+                //!!! Указать причину переназначения
+                //Решить понижаем ли рейтинг монтажника
+
+                //////Диалог переназначения монтажника(и выбора понижать ли рейтинг)
+                ////var options = new DialogOptions { CloseOnEscapeKey = false };
+                ////var parameters = new DialogParameters { ["reason"] = "VASYA" };
+                ////var dialog = DialogService.Show<ReassignmentReasonDialog>("Укажите причину переназначения монтажника", parameters, options);
+
+                ////var result = await dialog.Result;
+
+                ////var tt = dialog.RenderFragment;
+                ////var bb = dialog.Dialog.reason;
+                ////Console.WriteLine(bb.ToString());
+
+                ////if (!result.Cancelled)
+                ////{
+                ////}
+
+
+
+
+
+
+
+
+
+
+                await rabbit.SendMessageToQueues("", oldExecutor.Id,
+                new OrderDataMessage(orderId: order.Order.Id,
+                    orderName: order.Order.OrderName, statusName:
+                    order.Order.OrderStatus.StatusName, eventName: "",
+                    title: "Заявка была назначена другому исполнителю"));
+            }
+
+            ShowNotification(Severity.Success, "Заказ сохранен");
+        }
+        catch (Exception ex)
+        {
+            ShowNotification(Severity.Error, "Ошибка сохранения данных");
+            Console.WriteLine("Save_Exception: " + ex.Message);
+            return;
+        }
+        finally
+        {
+            _processing = false;
+            //RefreshDropContainer(_fieldsDropContainer, Fields);
+            //RefreshDropContainer(_executoFieldsDropContainer, ExecutorFields);
+
+            GetHistory();
+            StateHasChanged();
+        }
+    }
+
+    private void Edit(string id)
+    {
+        order = new OrderView(orderService.GetOne(id));
+        if (order == null) { return; }
+        if (order.Order == null) { order = null; return; }
+
+        //СТАРЫЙ СТАТУС
+        oldStatus = order.Order.OrderStatus;
+
+        //Тип Заказа(Отностися к шаблону)(в шаблоне string во view OrderType)
+        if(order.Order.Template.OrderType !=null)
+        {
+            order.OrderType = orderTypes.FirstOrDefault(x => x.TypeName == order.Order.Template.OrderType); //Найти тип по имени и выбрать его
+        }
+
+        OrderTemplate oldTemplate = order.Order.Template; //Получить шаблон со значениями из заказа
+        OrderTemplate lastTemplate = orderTemplateService.GetOne(order.Order.Template.Id); //Получить самый новый шаблон с пустыми значениями из базы. 
+                                                                                           //Зануляет длительность и все че есть в шаблоне    
+
+        if (lastTemplate == null || oldTemplate == null)
+        {
+            ShowNotification(Severity.Warning, "Не удалось загрузить шаблон");
+            return;
+        }
+
+        //Записать все значения полей из старого шаблона в новый
+        if (lastTemplate.Fields != null && lastTemplate.Fields.Count > 0)
+        {
+            foreach (var field in lastTemplate.Fields)
+            {
+                var oldFieldValue = oldTemplate?.Fields?.Find(x => x.Id == field.Id);
+                if (oldFieldValue != null)
+                {
+                    if (!string.IsNullOrEmpty(oldFieldValue.FieldName))
+                        field.FieldName = oldFieldValue.FieldName; //Имя поля
+                    if (!string.IsNullOrEmpty(oldFieldValue.FieldTechnicalName))
+                        field.FieldTechnicalName = oldFieldValue.FieldTechnicalName; //ТехИмя
+                    if (oldFieldValue.Position != null)
+                        field.Position = oldFieldValue.Position;
+                    if (oldFieldValue._value != null)
+                        field._value = oldFieldValue._value;
+                }
+            }
+        }
+        if (lastTemplate.ExecutorFields != null && lastTemplate.ExecutorFields.Count > 0)
+        {
+            foreach (var field in lastTemplate.ExecutorFields)
+            {
+                var oldFieldValue = oldTemplate?.ExecutorFields?.Find(x => x.Id == field.Id);
+                if (oldFieldValue != null)
+                {
+                    if (!string.IsNullOrEmpty(oldFieldValue.FieldName))
+                        field.FieldName = oldFieldValue.FieldName; //Имя поля
+                    if (!string.IsNullOrEmpty(oldFieldValue.FieldTechnicalName))
+                        field.FieldTechnicalName = oldFieldValue.FieldTechnicalName; //ТехИмя
+                    if (oldFieldValue.Position != null)
+                        field.Position = oldFieldValue.Position;
+                    if (oldFieldValue._value != null)
+                        field._value = oldFieldValue._value;
+                }
+            }
+        }
+
+        //Взять из нового шаблона только поля и времяПоследнегоСохранения
+        order.Order.Template.Fields = lastTemplate.Fields;
+        order.Order.Template.ExecutorFields = lastTemplate.ExecutorFields;
+        order.Order.Template.LastUpdateTime = lastTemplate.LastUpdateTime;
+
+        template = order.Order.Template.Id;
+
+        //КЛИЕНТ
+        if (order.Order.Client != null)
+        {
+            currentClient = order.Order.Client;
+        }
+        //АДРЕС
+        if (order.Order.Address != null)
+        {
+            address = order.Order.Address;
+        }
+        //КОНТАКТЫ
+        if (order.Order.Contacts != null)
+        {
+            contacts = order.Order.Contacts;
+        }
+        //ИСПОЛНИТЕЛЬ
+        if (order.Order.OrderEmployeeExecutor != null)
+        {
+            currentExecutor = order.Order.OrderEmployeeExecutor;
+        }
+        //Регионы
+        if (order.Order.Regions != null && order.Order.Regions.Count > 0)
+        {
+            selectedRegionValues = order.Order.Regions;
+        }
+
+        //Перевести все поля из TemplateField в TemplateFieldView
+        if (order.Fields != null)
+        {
+            order.Fields.Clear();
+            if (order.Order.Template.Fields != null)
+            {
+                var fieldsRaw = order.Order.Template.Fields.OrderBy(x => x.Position).ToList();
+                foreach (var field in fieldsRaw)
+                {
+                    TemplateFieldView fieldView = new(field);
+                    order.Fields.Add(fieldView);
+                }
+            }
+        }
+
+        if (order.ExecutorFields != null)
+        {
+            order.ExecutorFields.Clear();
+            if (order.Order.Template.ExecutorFields != null)
+            {
+                var executorFieldsRaw = order.Order.Template.ExecutorFields.OrderBy(x => x.Position).ToList();
+                foreach (var field in executorFieldsRaw)
+                {
+                    TemplateFieldView fieldView = new(field);
+                    order.ExecutorFields.Add(fieldView);
+                }
+            }
+        }
+
+        //Если статус Завершено Отклонено Отменено или Удалено( Убрать галочку уведомить исполнителя )
+        if (order.Order.OrderStatus.Equals(OrderStatus.COMPLETED) || order.Order.OrderStatus.Equals(OrderStatus.REJECTED) || order.Order.OrderStatus.Equals(OrderStatus.CANCELED) /*|| order.Order.OrderStatus.Equals(OrderStatus.DELETED)*/)
+            isNotifyExecutor = false;
+
+        ////RefreshDropContainer(_fieldsDropContainer, Fields);
+        ////RefreshDropContainer(_executoFieldsDropContainer, ExecutorFields);
+    }
+
+    private async void OpenDialogDelete(string id, string name)
+    {
+        var options = new DialogOptions { CloseOnEscapeKey = true };
+        var dialog = DialogService.Show<Dialog>("Удалить " + name + "?", options);
+
+        var result = await dialog.Result;
+        if (!result.Cancelled)
+        {
+            var delResult = await Delete(id);
+            if (delResult == true)
+            {
+                CloseWindow();
+            }
+            else { ShowNotification(Severity.Error, "Ошибка удаления данных"); }
+        }
+
+    }
+    private async Task<bool> Delete(string id)
+    {
+        try
+        {
+            //save order info
+            Order order = orderService.GetOne(id);
+            string orderId = order.Id;
+            string orderName = order.OrderName;
+            string statusName = OrderStatus.DELETED_STATUS_NAME;/*OrderStatus.DELETED.StatusName;*/
+            string executorId = string.Empty;
+            if (order.OrderEmployeeExecutor != null)
+                executorId = order.OrderEmployeeExecutor.Id;
+
+            long result = orderService.Delete(id);
+
+            if (result > 0)
+            {
+                if (order.OrderStatus.Equals(OrderStatus.NEW)
+                || order.OrderStatus.Equals(OrderStatus.ACCEPTED)
+                || order.OrderStatus.Equals(OrderStatus.INROAD)
+                || order.OrderStatus.Equals(OrderStatus.ACTIVE)
+                || order.OrderStatus.Equals(OrderStatus.SUSPENDED)
+                || order.OrderStatus.Equals(OrderStatus.CHANGED))
+                {
+                    if (!string.IsNullOrEmpty(executorId)) //уведомить исполнителя
+                    {
+                        await rabbit.SendMessageToQueues("", executorId,
+                        new OrderDataMessage(orderId: orderId, orderName: orderName, statusName: statusName, eventName: "", title: "Заявка" + orderName + " удалена"));
+                    }
+                }
+
+                return true;
+            }
+            else { return false; }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("OrderPage=>Delete() Error: " + ex.Message);
+            return false;
+        }
+
+    }
+
+    private async Task<bool> UploadFiles()
+    {
+        try
+        {
+            List<TemplateFieldView> fileFields = new();
+            if (order.Fields != null)
+            {
+                fileFields.AddRange(order.Fields.Where(x => x.AsFiles != null && x.AsFiles.Count > 0).ToList());
+            }
+            if (order.ExecutorFields != null)
+            {
+                fileFields.AddRange(order.ExecutorFields.Where(x => x.AsFiles != null && x.AsFiles.Count > 0).ToList());
+            }
+
+            foreach (var field in fileFields)
+            {
+                foreach (FileView file in field.AsFiles)
+                {
+                    if (file.browserFile != null)
+                    {
+
+                        string path = Path.Combine(Utils.UploadPath.UploadDir, file.TFile.Name);
+                        await using FileStream fs = new(path, FileMode.Create);
+                        var tt = file.browserFile.OpenReadStream(Utils.UploadPath.MAX_FILE_SIZE);
+                        await tt.CopyToAsync(fs);
+                        //set full path
+                        file.TFile.FullPath = Path.Combine(Utils.UploadPath.UploadUrl, file.TFile.Name);
+
+                    }
+                }
+            }
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.Message);
+            //Console.Beep(2000, 200);
+            return false;
+        }
+
+    }
+    private void DeleteFile(TemplateFieldView context, string filename)
+    {
+        context.DeleteFile(filename);
+    }
+
+    private async void SetUploadedFileNames(InputFileChangeEventArgs e, TemplateFieldView context, bool onlyImages)
+    {
+        try
+        {
+            //ClearOldValues
+            context.AsFiles.Clear();
+
+            var items = e.GetMultipleFiles().ToArray();
+            foreach (var item in items)
+            {
+                if (item.Size > Utils.UploadPath.MAX_FILE_SIZE)
+                {
+                    ShowNotification(Severity.Warning, "Размер файла должен быть не больше " + ((Utils.UploadPath.MAX_FILE_SIZE / 1024) / 1024) + "МБ");
+                    return;
+                }
+
+                if (onlyImages == true && Utils.UploadPath.IsImage(item.Name) == false)
+                {
+                    ShowNotification(Severity.Warning, "Разрешены только изображения");
+                    return;
+                }
+            }
+
+            context.AddFiles(items);
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            ShowNotification(Severity.Warning, "Ошибка загрузки файлов");
+            Console.WriteLine("SetUploadedFileNames: " + ex.Message);
+        }
+    }
+
+
+
+
+
+    private void ShowNotification(Severity severity, string text)
+    {
+        Snackbar.Clear();
+        Snackbar.Add(text, severity);
+    }
+
+    private bool _processing = false;
+
+
+
+}
+

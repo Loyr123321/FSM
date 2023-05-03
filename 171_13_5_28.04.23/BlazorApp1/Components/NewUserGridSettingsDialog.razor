@@ -1,0 +1,108 @@
+﻿@using BlazorApp1.Models;
+<MudDialog DefaultFocus="DefaultFocus.LastChild">
+    <DialogContent>
+        <div class="row">
+            <div class="col-12">
+                <label><strong>Название формата:</strong></label>
+
+                <input class="form_input_plnd" @bind="settingsName" style="width:100%;" />
+                
+            </div>
+            <div class="col-12">
+
+                <!-- Новый -->
+                @if (dialogType == GridSettingsDialogType.New.ToString())
+                {
+                    @if (isGeneral == false)
+                    {
+                        <MudCheckBox @bind-Checked="@isMain" Color="Color.Primary" Style="margin:0; padding:0;" @onclick=@(e=>SetGeneralFalse())>Сделать основным для себя</MudCheckBox>
+                    }
+                    else
+                    {
+                        <MudCheckBox @bind-Checked="@isMain" Color="Color.Primary" Style="margin:0; padding:0;" Disabled="true">Сделать основным для себя</MudCheckBox>
+                    }
+
+                    @if (isAdmin)
+                    {
+                        @if (isMain == false)
+                        {
+                            <MudCheckBox @bind-Checked="@isGeneral" Color="Color.Primary" Style="margin:0; padding:0;" @onclick=@(e=>SetMainFalse())>Сделать общим</MudCheckBox>
+                        }
+                        else
+                        {
+                            <MudCheckBox @bind-Checked="@isGeneral" Color="Color.Primary" Style="margin:0; padding:0;" Disabled="true">Сделать общим</MudCheckBox>
+                        }
+                    }
+                    else
+                    {
+                        <MudCheckBox @bind-Checked="@isGeneral" Color="Color.Primary" Style="margin:0; padding:0;" Disabled="true">Сделать общим</MudCheckBox>
+                    }
+                }
+
+
+                <!-- Сохранить -->
+                @if (dialogType == GridSettingsDialogType.Save.ToString())
+                {
+                    @if (isGeneral == false)
+                    {
+                        <MudCheckBox @bind-Checked="@isMain" Color="Color.Primary" Style="margin:0; padding:0;">Сделать основным для себя</MudCheckBox>
+                    }
+                    else
+                    {
+                        <MudCheckBox @bind-Checked="@isGeneral" Color="Color.Primary" Style="margin:0; padding:0;" Disabled="true">Общий</MudCheckBox>
+                    }
+                }
+
+
+            </div>
+        </div>
+    </DialogContent>
+
+    <DialogActions>
+        <MudButton Color="Color.Primary" OnClick="Cancel">Отмена</MudButton>
+        <MudButton Color="Color.Primary" OnClick="Submit">Сохранить</MudButton>
+    </DialogActions>
+</MudDialog>
+@code {
+    [CascadingParameter]
+    MudDialogInstance MudDialog { get; set; }
+
+    private List<object> listResult = new();
+
+    //Параметр для проверки есть права у юзера на создание общих шаблонов
+    [ParameterAttribute]
+    public bool isAdmin { get; set; }
+
+    [ParameterAttribute]
+    public string dialogType { get; set; }
+
+    [ParameterAttribute]
+    public string settingsName { get; set; }
+
+    //Основной для юзера
+    [ParameterAttribute]
+    public bool isMain { get; set; } = false;
+
+    //Общий
+    [ParameterAttribute]
+    public bool isGeneral { get; set; } = false;
+    private void SetMainFalse()
+    {
+        isMain = false;
+    }
+    private void SetGeneralFalse()
+    {
+        isGeneral = false;
+    }
+
+    private void Submit()
+    {
+        listResult.Add(settingsName);
+        listResult.Add(isMain);
+        listResult.Add(isGeneral);
+
+        MudDialog.Close(DialogResult.Ok(listResult));
+    }
+    private void Cancel() => MudDialog.Cancel();
+
+}

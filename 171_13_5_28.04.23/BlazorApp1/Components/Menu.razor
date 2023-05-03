@@ -1,0 +1,172 @@
+﻿@inject NavigationManager navigationManager
+
+<div class="sidebar_fixed">
+	<div class="top-row ps-3 navbar navbar-light">
+		<div class="container-fluid">
+			<a class="navbar-brand text-white" href="#"></a>
+			<button title="Navigation menu" class="navbar-toggler" @onclick="ToggleNavMenu">
+				<span class="navbar-toggler-icon"></span>
+			</button>
+		</div>
+	</div>
+
+
+	<nav class="@NavMenuCssClass ">
+
+		<div class="menu_group_1">
+
+			<div class="nav-item">
+				<NavLink class="nav-link" href="neworder">
+					<div class="col menu-item-cont">
+						<div class="menu_icon_addOrder menu_icon"></div>
+						<div class="menu-icon-text" aria-hidden="true">Новый <br />заказ</div>
+					</div>
+				</NavLink>
+			</div>
+
+
+			<div class="nav-item">
+				<NavLink class="nav-link" href="orders">
+					<div class="col menu-item-cont">
+						<div class="menu_icon_orders menu_icon"></div>
+						<div class="menu-icon-text" aria-hidden="true">Заказы</div>
+					</div>
+				</NavLink>
+			</div>
+
+			<div class="nav-item ">
+				<NavLink class="nav-link" href="clients">
+					<div class="col menu-item-cont">
+						<div class="menu_icon_customers menu_icon">
+						</div>
+						<div class="menu-icon-text" aria-hidden="true">Клиенты</div>
+					</div>
+				</NavLink>
+			</div>
+		</div>
+
+
+
+
+
+		<div class="menu_group_2">
+			<div class="nav-item  ">
+				<NavLink class="nav-link" href="employees">
+
+
+					<div class="col menu-item-cont">
+						<div class="menu_icon_workers menu_icon">
+						</div>
+						<div class="menu-icon-text" aria-hidden="true">Мастера</div>
+					</div>
+				</NavLink>
+			</div>
+
+
+			<div class="nav-item ">
+				<NavLink class="nav-link" href="skills">
+					<div class="menu-item-cont">
+						<div class="menu_icon_competence menu_icon">
+						</div>
+						<div class="menu-icon-text" aria-hidden="true">Навыки</div>
+					</div>
+				</NavLink>
+			</div>
+		</div>
+
+		<div class="menu_group_3">
+			<div class="nav-item ">
+				<NavLink class="nav-link" href="templates">
+					<div class="menu-item-cont">
+						<div class="menu_icon_templates menu_icon">
+						</div>
+						<div class="menu-icon-text" aria-hidden="true">Шаблоны</div>
+					</div>
+				</NavLink>
+			</div>
+
+			<div class="nav-item">
+				<NavLink class="nav-link" href="ordertypes">
+					<div class="menu-item-cont">
+						<div class="menu_icon_ordersTypes menu_icon">
+						</div>
+						<div class="menu-icon-text" aria-hidden="true">Типы <br />заказов</div>
+					</div>
+				</NavLink>
+			</div>
+
+			<div class="nav-item">
+				<NavLink class="nav-link" href="cancellation_reasons">
+					<div class="menu-item-cont">
+						<div class="menu_icon_reasonsCancel menu_icon">
+						</div>
+						<div class="menu-icon-text" aria-hidden="true">Причины <br />отмены</div>
+					</div>
+				</NavLink>
+			</div>
+
+			<div class="nav-item">
+				<NavLink class="nav-link" href="datalists">
+					<div class="menu-item-cont">
+						<div class="menu_icon_listVal menu_icon">
+						</div>
+						<div class="menu-icon-text" aria-hidden="true">Списки <br />значений</div>
+					</div>
+				</NavLink>
+			</div>
+
+
+			<div class="nav-item">
+				<NavLink class="nav-link" href="regions">
+					<div class="menu-item-cont">
+						<div class="menu_icon_regions menu_icon">
+						</div>
+						<div class="menu-icon-text" aria-hidden="true">Регионы</div>
+					</div>
+				</NavLink>
+			</div>
+
+			<div class="nav-item">
+				<NavLink class="nav-link" href="users">
+					<div class="menu-item-cont">
+						<div class="menu_icon_customers menu_icon">
+						</div>
+						<div class="menu-icon-text" aria-hidden="true">Users</div>
+					</div>
+				</NavLink>
+			</div>
+
+
+		</div>
+
+		<div class="account_div" @onclick="(e=> RedirectToAccountPage() )">
+			<div class="account_circle">
+				<div class="account_text">@authenticationStateTask?.Result?.User?.Identity?.Name[0]</div>
+			</div>
+			<br>
+		</div>
+
+	</nav>
+</div>
+
+
+
+@code
+{
+	[CascadingParameter]
+	private Task<AuthenticationState> authenticationStateTask { get; set; }
+	private void RedirectToAccountPage()
+	{
+		navigationManager.NavigateTo("/account", true, true);
+
+	}
+
+	private bool collapseNavMenu = true;
+
+	private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
+
+	private void ToggleNavMenu()
+	{
+		collapseNavMenu = !collapseNavMenu;
+	}
+}

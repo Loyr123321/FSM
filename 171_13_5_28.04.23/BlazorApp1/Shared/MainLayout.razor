@@ -1,0 +1,24 @@
+﻿@inherits LayoutComponentBase
+
+<PageTitle>FSM</PageTitle>
+
+<div class="page">
+
+    @if ((bool)authenticationStateTask?.Result?.User?.Identity?.IsAuthenticated)
+    {
+        <div class="e-sidebar">
+            <BlazorApp1.Components.Menu/>
+        </div>
+    }
+
+    <main>
+        <article class="content px-4">
+            @Body
+        </article>
+    </main>
+</div>
+
+@code{
+    [CascadingParameter]
+    private Task<AuthenticationState> authenticationStateTask { get; set; }
+}

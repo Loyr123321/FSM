@@ -1,0 +1,24 @@
+﻿@page "/test3"
+@inject ProtectedSessionStorage protectedSessionStore
+@inject ProtectedLocalStorage protectedLocalStorage
+
+<h3>33333</h3>
+@tt
+
+@code {
+
+    public string tt{ get; set; }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            //await protectedLocalStorage.SetAsync("name", "John Smith");
+            var storageResult = await protectedLocalStorage.GetAsync<string>("name");
+            tt = storageResult.Value;
+            StateHasChanged();
+            Console.WriteLine(storageResult.Value);
+        }
+    }
+
+}

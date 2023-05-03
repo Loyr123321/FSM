@@ -1,0 +1,212 @@
+﻿@page "/register"
+
+@using BlazorApp1.Auth;
+@using BlazorApp1.Models
+@using BlazorApp1.Services
+@using BlazorApp1.Utils;
+@using Microsoft.AspNetCore.Authentication;
+@using Microsoft.IdentityModel.JsonWebTokens;
+@using MudBlazor.Utilities
+@using Newtonsoft.Json;
+@using Radzen;
+@using System.Security.Claims;
+@using static BlazorApp1.Auth.AuthOptions;
+@inject ILoggerFactory LoggerFactory
+@inject ISnackbar Snackbar
+@inject NavigationManager NavigationManager
+@inject UserService userService
+@inject IHttpContextAccessor HttpContextAccessor
+@inject MailService mailService
+
+@if (errorCode == null && newUser != null)
+{
+    <EditForm Model="@newUser" OnValidSubmit="@Register">
+    <Blazored.FluentValidation.FluentValidationValidator></Blazored.FluentValidation.FluentValidationValidator>
+    <div class="row d-flex justify-content-center">
+        <div class="col-12 col-xs-12 col-md-6 col-lg-6 my_form">
+            <h3>Регистрация</h3>
+            <div class="row" style="margin-top: 10px;">
+
+                <div class="col-md-12">
+                    <label>Логин:</label>
+                    <input type="text" value=@newUser.Email class="form-control form_input_plnd" style="width:100%;" disabled/>
+                </div>
+                <div class="col-md-12">
+                    <label>Роли:</label>
+                    <input type="text" value=@GetRolesAsString() class="form-control form_input_plnd" style="width:100%;" disabled/>
+                </div>
+
+                <div class="col-md-12">
+                    <label>Фамилия:</label>
+                    <InputText @bind-Value=newUser.LastName class="form-control form_input_plnd" style="width:100%;" />
+                    <ValidationMessage For="() => newUser.LastName" />
+                </div>
+                <div class="col-md-12">
+                    <label>Имя:</label>
+                    <InputText @bind-Value=newUser.FirstName class="form-control form_input_plnd" style="width:100%;" />
+                    <ValidationMessage For="() => newUser.FirstName" />
+                </div>
+                <div class="col-md-12">
+                    <label>Отчество:</label>
+                    <InputText @bind-Value=newUser.MiddleName class="form-control form_input_plnd" style="width:100%;" />
+                    <ValidationMessage For="() => newUser.MiddleName" />
+                </div>
+               
+
+                <div class="col-md-12">
+                    <label>Пароль:</label>
+                    <InputText type="password" @bind-Value="@newUser.Password" class="form-control form_input_plnd" style="width:100%;"/>
+                </div>
+                <div class="col-md-12">
+                    <label>Подтверждение пароля:</label>
+                    <InputText type="password" @bind-Value="@newUser.ConfirmPassword" class="form-control form_input_plnd" style="width:100%;"/>
+                    @*<ValidationMessage For="() => newUser.Password" />*@
+                    <ValidationMessage For="() => newUser.ConfirmPassword" />
+                </div>
+
+                
+
+                <div style="float: right; text-align: right;">
+                    <MudButton Disabled="@_processing" Variant="MudBlazor.Variant.Filled" Color="Color.Primary" ButtonType="MudBlazor.ButtonType.Submit">
+                        <MudText>Создать учетную запись</MudText>
+                    </MudButton>
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+    </EditForm>  
+}
+else
+{
+    @if(errorCode==null)
+    {
+        <div>Неверные данные для регистрации</div>
+    }
+    else
+    {
+      <div>@ErrorHandling.GetErrorMessage((int)errorCode)</div>  
+    }
+    
+}
+
+@code {
+
+    [Parameter]
+    [SupplyParameterFromQuery]
+    public string token { get; set; }
+
+    [Parameter]
+    [SupplyParameterFromQuery]
+    public int? errorCode { get; set; }
+
+
+    [CascadingParameter]
+    private Task<AuthenticationState> authenticationStateTask { get; set; }
+    protected override async Task OnInitializedAsync()
+    {
+        var authenticationState = await authenticationStateTask;
+        if (authenticationState.User.Identity.IsAuthenticated)// Пользователь залогинен
+        {
+            NavigationManager.NavigateTo("/"); //перекинуть в корень
+        }
+
+        //Токен не пустой
+        if(!string.IsNullOrEmpty(token))
+        {
+            var handler = new System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler();
+            System.IdentityModel.Tokens.Jwt.JwtSecurityToken jwtSecurityToken;
+            try
+            {
+                jwtSecurityToken = handler.ReadJwtToken(token);
+            }
+            catch(Exception ex)
+            {
+                errorCode = (int)ErrorHandling.ErrorCodes.ERROR_INVALID_TOKEN;
+                return;
+            }
+
+
+            var isValid = AuthOptions.ValidateToken(token, AuthOptions.GetSymmetricSecurityKey(), true, true);
+            if (isValid == false)
+            {
+                errorCode = (int)ErrorHandling.ErrorCodes.ERROR_INVALID_TOKEN;
+                return;
+            }
+
+            if (jwtSecurityToken.Subject != JWT_TYPE.Register.ToString())
+            {
+                errorCode = (int)ErrorHandling.ErrorCodes.ERROR_TOKEN_WRONG_SUBJECT;
+                return;
+            }
+
+            newUser = new();
+            newUser.Email = jwtSecurityToken.Claims.FirstOrDefault(claim => claim.Type == JwtRegisteredClaimNames.Email).Value;
+            newUser.Roles = Newtonsoft.Json.JsonConvert.DeserializeObject<List<string>>(jwtSecurityToken.Claims.First(claim => claim.Type == "ROLES").Value);
+            StateHasChanged();
+        }
+
+
+
+
+
+    }
+    private string GetRolesAsString()
+    {
+        string result = string.Empty;
+
+        if (newUser.Roles != null && newUser.Roles.Count > 0)
+        {
+            foreach(var role in newUser.Roles)
+            {
+                result += role+", ";
+            }
+
+            var index = result.LastIndexOf(", ");
+            if (index >= 0)
+            {
+                result = result.Substring(0, index);
+            }
+        }
+
+
+        return result;
+    }
+    private User? newUser = null;
+    private bool _processing = false;
+    private async Task Register()
+    {
+        try
+        {
+            _processing = true; await Task.Delay(1);
+
+            newUser.Trim();
+            newUser.Password = newUser.GetHash(newUser.Password);
+
+            userService.SaveOrUpdate(newUser);
+            ShowNotification(MudBlazor.Severity.Success, "Пользователь успешно создан");
+            newUser.Password = string.Empty;
+            newUser.ConfirmPassword = string.Empty;
+
+            NavigationManager.NavigateTo("/login", true);
+        }
+        catch (Exception ex)
+        {
+            ShowNotification(MudBlazor.Severity.Error, "Ошибка отправки данных");
+            Console.WriteLine("Register_Exception: " + ex.Message);
+            return;
+        }
+        finally
+        {
+            _processing = false;
+            StateHasChanged();
+        }
+    }
+    
+    private void ShowNotification(MudBlazor.Severity severity, string text)
+    {
+        Snackbar.Clear();
+        Snackbar.Add(text, severity);
+    }
+}

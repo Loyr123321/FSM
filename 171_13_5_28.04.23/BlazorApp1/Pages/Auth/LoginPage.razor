@@ -1,0 +1,300 @@
+﻿@page "/"
+@page "/login"
+
+@using BlazorApp1.Auth;
+@using BlazorApp1.Models
+@using BlazorApp1.Services
+@using BlazorApp1.Utils;
+@using BlazorApp1.Views
+@using Microsoft.AspNetCore.Authentication;
+@using Microsoft.AspNetCore.Identity;
+@using MudBlazor.Utilities
+@using Radzen;
+@using System.Security.Claims;
+@using static BlazorApp1.Auth.AuthOptions;
+@inject ILoggerFactory LoggerFactory
+@inject UserService userService
+@inject ISnackbar Snackbar
+@inject NavigationManager navigationManager
+@inject Services.RabbitMQService rabbit
+@inject MailService mailService
+
+@inject IHttpContextAccessor HttpContextAccessor
+
+@if ((bool)authenticationStateTask?.Result?.User?.Identity?.IsAuthenticated)
+{
+    @*<h3>Test_Auth</h3>
+    <div>
+        Name: @authenticationStateTask.Result.User.Identity.Name
+    </div>
+
+    <div>Права админа: @authenticationStateTask.Result.User.IsInRole("Admin")</div>
+    <div>Права диспетчера: @authenticationStateTask.Result.User.IsInRole("Dispatcher")</div>*@
+    @if (errorCode != null)
+    {
+        try
+        {
+
+            <h3 style="color: red;">
+                @ErrorHandling.GetErrorMessage((int)errorCode);
+            </h3>
+
+        }
+        catch { }   
+    }
+}
+else
+{
+    @if (isShowResetForm == false)
+    {
+        <EditForm Model="@nullBuffModel" OnSubmit="@AuthAndLogin">
+            <div class="row d-flex justify-content-center">
+            <div class="col-12 col-xs-12 col-md-6 col-lg-4 my_form">
+                <div class="company_brand menu_icon"></div>
+                <div class="login_enter">Вход</div>
+                <div class="row">
+                    <div class="col-md-12">
+                        <div><label class="login_input_log">Логин</label></div>
+                        <input class="form_input_plnd_log_password" @bind="login" style="width:100%;" />
+                    </div>
+                    <div class="col-md-12">
+                        <div style="max-width:300px"><label class="login_input_password">Пароль:</label></div>
+                        <input type="password" class="form_input_plnd_log_password" @bind="password" style="width:100%;" />
+                        <div class="get_client_info_login" @onclick="(e=> ShowResetForm() )">
+                            Забыли пароль?
+                        </div>
+                    </div>
+                    <div style="text-align:center; margin-top:25px">
+                        <MudButton type="submit" Class="login_button" Disabled="@_processing" Variant="MudBlazor.Variant.Filled" ButtonType="MudBlazor.ButtonType.Submit" OnClick="@(e=>AuthAndLogin())">
+                            <MudText Class="login_button_text">Войти</MudText>
+                        </MudButton>
+                    </div>
+                </div>
+
+                    @if (errorCode != null)
+                    {
+                        try
+                        {
+
+                            <h3 style="color: red;">
+                                @ErrorHandling.GetErrorMessage((int)errorCode);
+                            </h3>
+
+                        }
+                        catch { }
+                    }
+
+            </div>
+        </div>
+        </EditForm>
+    }
+    else
+    {
+        <EditForm Model="@nullBuffModel" OnSubmit="@ResetPassword">
+            <div class="row d-flex justify-content-center">
+            <div class="col-12 col-xs-12 col-md-6 col-lg-4 my_form">
+                <h3>Восстановить учетную запись</h3>
+
+                <div class="row" style="margin-top: 10px;">
+                    <div class="col-md-12">
+                        <label>Логин (Почта):</label>
+                        <input class="form_input_plnd" @bind="login" style="width:100%;" />
+                    </div>
+
+                    <div style="float: right; text-align: right;">
+                        <MudButton Disabled="@_processing" Variant="MudBlazor.Variant.Filled" Color="Color.Default" OnClick="@(e=>HideResetForm())">
+                            <MudText>Отменить</MudText>
+                        </MudButton>
+                        <MudButton Disabled="@_processing" Variant="MudBlazor.Variant.Filled" Color="Color.Primary" OnClick="@(e=>ResetPassword())">
+                            <MudText>Отправить</MudText>
+                        </MudButton>
+                    </div>
+                </div>
+
+                
+                @if (errorCode != null)
+                {
+                    try
+                    {
+
+                        <h3 style="color: red;">
+                            @ErrorHandling.GetErrorMessage((int)errorCode);
+                        </h3>
+
+                    }
+                    catch { }
+                }
+                
+
+            </div>
+        </div>
+        </EditForm>
+    }
+}
+
+
+@code
+{
+    //Модель заглушка для EditForm
+    private class BuffModel{}
+    private BuffModel nullBuffModel = new BuffModel();
+
+    private bool isShowResetForm = false;
+    private void ShowResetForm()
+    {
+        isShowResetForm = true;
+        errorCode = null;
+    }
+    private void HideResetForm()
+    {
+        isShowResetForm = false;
+        errorCode = null;
+    }
+
+    private bool _processing = false;
+    //_processing = true; await Task.Delay(1);
+
+    private string login;//login==email
+    private string password;
+
+    //[Parameter]
+    //[SupplyParameterFromQuery]
+    //public string? errorCode { get; set; }
+    [Parameter]
+    [SupplyParameterFromQuery]
+    public int? errorCode { get; set; }
+
+    [CascadingParameter]
+    private Task<AuthenticationState> authenticationStateTask { get; set; }
+
+    private void ResetPassword()
+    {
+        errorCode = null;
+
+        if (string.IsNullOrEmpty(login))
+            return;
+
+        var user = userService.GetUserByEmail(login);
+        if (user == null || string.IsNullOrEmpty(user.Email))
+        {
+            ShowNotification(Severity.Warning, "Пользователь с такой почтой не существует");
+            return;
+        }
+
+        if(user.IsActive == false)
+        {
+            errorCode = (int)ErrorHandling.ErrorCodes.ERROR_USER_BLOCKED;
+            return;
+        }
+
+        var resetPasstoken = AuthOptions.CreateResetPassJWT(user.Email);
+        string url = UploadPath.BaseUrl + "/resetpass?token=" + resetPasstoken;
+        mailService.SendMail(To: user.Email, Subject: "FSM_ResetPassword", url);
+        ShowNotification(MudBlazor.Severity.Normal, "Инструкция для сброса пароля отправлена на почту " + user.Email);
+    }
+
+    private async Task AuthAndLogin()
+    {
+        errorCode = null;
+        Login(Auth());
+    }
+    private User? Auth()
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(login))
+            {
+                ShowNotification(Severity.Warning, "Заполните поле логин");
+                return null;
+            }
+
+            var user = userService.GetUserByEmail(login.ToLower());
+            if (user == null)
+            {
+                ShowNotification(Severity.Warning, "Пользователь не найден");
+                return null;
+            }
+
+            try
+            {
+                if (string.IsNullOrEmpty(password))
+                {
+                    ShowNotification(Severity.Warning, "Заполните поле пароль");
+                    return null;
+                }
+
+                bool access = SecretHasher.Verify(password, user.Password);
+                if (access == false)
+                {
+                    ShowNotification(Severity.Warning, "Неверный пароль");
+                    return null;
+                }
+            }
+            catch(Exception ex)
+            {
+                ShowNotification(Severity.Warning, "Ошибка проверки пароля. Обратитесь к администратору");
+                Console.WriteLine("LoginPage_Auth(Pass)_Exception: " + ex.Message);
+                return null;
+            }
+
+            return user;
+        }
+        catch (Exception ex)
+        {
+            ShowNotification(Severity.Warning, "Возникла неизвестная ошибка. Обратитесь к администратору");
+            Console.WriteLine("LoginPage_Auth_Exception: " + ex.Message);
+            return null;
+        }
+        finally
+        {
+            _processing = false;
+            StateHasChanged();
+        }
+    }
+    private async Task Login(User inputUser)
+    {
+        if (inputUser == null)
+            return;
+
+        var authState = await authenticationStateTask;
+        var user = authState.User;
+        var context = HttpContextAccessor.HttpContext;
+
+        if (user.Identity.IsAuthenticated) //Уже аутентифицирован
+        {
+            return;
+        }
+        else
+        {
+            string token = AuthOptions.CreateWebLoginJWT(User.CloneUserWithoutPass(inputUser));
+            navigationManager.NavigateTo("/loginUser?token=" + token, true, true);
+
+            /*
+            var claims = new List<Claim>();
+            if (inputUser.Roles != null && inputUser.Roles.Count > 0)
+                    {
+                    foreach (var role in inputUser.Roles)
+                    {
+                    claims.Add(new Claim(ClaimsIdentity.DefaultRoleClaimType, role));
+            }
+            }
+
+            ClaimsIdentity claimsIdentity = new ClaimsIdentity(claims);
+            var claimsPrincipal = new ClaimsPrincipal(claimsIdentity);
+
+            await context.SignInAsync(claimsPrincipal); // установить аутентификационных куки
+            */
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        //Console.WriteLine(authenticationStateTask.Result);
+    }
+
+    private void ShowNotification(Severity severity, string text)
+    {
+        Snackbar.Clear();
+        Snackbar.Add(text, severity);
+    }
+}

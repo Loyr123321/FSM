@@ -1,0 +1,230 @@
+﻿@page "/skills"
+@attribute [Authorize(Roles = "Admin,Dispatcher")]
+@*@attribute [Authorize(Policy = "RequireRole")]*@
+@using BlazorApp1.Components
+@using BlazorApp1.Models
+@using BlazorApp1.Models.Validation;
+@using BlazorApp1.Services
+@using Blazored.Modal
+@using Blazored.Modal.Services
+
+@using Blazored.Toast.Configuration
+@inject Services.SkillService skillService
+@inject IToastService toastService
+@inject ILoggerFactory LoggerFactory
+
+@inject ISnackbar Snackbar
+
+@using MudBlazor.Utilities
+
+<div class="row">
+
+    <div class="col-12 ">
+        <h1>Навыки</h1>
+        <br />
+    </div>
+
+    <div class="col-12 col-lg-10 col-md-10 col-sm-10 col-xs-10 types_of_body">
+        <MudDropContainer @ref="_dropContainer" T="Skill" Items="skills" ItemsSelector="@((item,dropzone) => item.Selector == "myselector")" ItemDropped="ItemUpdated" Class="d-flex flex-wrap flex-grow-1 " ItemIsDisabled="@( (item) => true)">
+            <ChildContent>
+                <MudPaper Class="flex-grow-1">
+                    <MudList Clickable="false" Class="d-flex flex-column mud-height-full">
+                        <MudDropZone T="Skill" Identifier="1" Class="justify-center align-center flex-grow-1" AllowReorder="true" />
+                        <div class="row" style="margin-bottom:10px">
+                            <div class="col-12">
+                                <div class="add_to_changeVal_btn">
+                                    <button @onclick="@(e => AddSkill())" class="type_btn_group" Title="Add">
+                                        <div class="button_add_value"></div>
+                                        <span class="text_button_add_value">Добавить навык </span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="save_cancel_group_btn">
+                                    <MudButton Disabled="@_processing" Class="button_discardChange" OnClick="@(e=>Reset())">
+                                        <MudText Class="button_discardChange_text">Отмена</MudText>
+                                    </MudButton>
+                                    <MudButton Disabled="@_processing" Class="button_saveChange" OnClick="@(e=>Save())">
+                                        @if (_processing)
+                                        {
+                                            <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                                            <MudText Class="ms-2">Сохраняется</MudText>
+                                        }
+                                        else
+                                        {
+                                            <MudText Class="button_saveChange_text">Сохранить</MudText>
+                                        }
+                                    </MudButton>
+                                </div>
+                            </div>
+                        </div>
+                    </MudList>
+                </MudPaper>
+            </ChildContent>
+            <ItemRenderer>
+                <div class="row align-items-center row_space_between">
+                    <div class="col-1 col-xxl-1 col-xl-1 col-lg-2 col-md-2 col-sm-2" draggable="true">
+                        <button class="dragdrop_button"></button>
+                    </div>
+
+                    <div class="col-8 col-xxl-10 col-xl-10 col-lg-8 col-md-8 col-sm-8">
+                        <input class="form_input_Value z_101" @bind="@context.SkillName" style="width:100%;" placeholder="" />
+                    </div>
+
+                    <div class="col-3 col-xxl-1 col-xl-1 col-lg-2 col-md-2 col-sm-2" style="text-align:right">
+                        <button class="button_Value_delete" @onclick="(e => Delete(context.Id))"></button>
+                    </div>
+                </div>
+            </ItemRenderer>
+        </MudDropContainer>
+
+
+    </div>
+
+</div>
+
+@code
+{
+    protected override async Task OnInitializedAsync()
+    {
+        GetSkills();
+    }
+    private bool _processing = false;
+    private void ShowNotification(Severity severity, string text)
+    {
+        Snackbar.Clear();
+        Snackbar.Add(text, severity);
+    }
+
+    private MudDropContainer<Skill> _dropContainer;
+    private void ItemUpdated(MudItemDropInfo<Skill> dropItem)
+    {
+        var indexOffset = dropItem.DropzoneIdentifier switch
+        {
+            "2" => skills.Count(x => x.Selector == "myselector"),
+            _ => 0,
+        };
+        skills.UpdateOrder(dropItem, item => item.Position, indexOffset);
+    }
+    private void Refresh()
+    {
+        if (_dropContainer != null)
+        {
+            _dropContainer.Items = skills;
+            _dropContainer.Refresh();
+
+            ////_dropContainer.ItemRenderer.FOCUS()
+        }
+    }
+
+    private List<Skill> skills = new List<Skill>();
+    private void GetSkills()
+    {
+        skills = skillService.GetAll().OrderBy(x => x.Position).ToList();
+    }
+    private void AddSkill()
+    {
+        var skill = new Skill();
+        if (skills.Count() > 0)
+        {
+            skill.Position = skills[skills.Count - 1].Position + 1;
+        }
+        skills.Add(skill);
+        Refresh();
+    }
+
+    private string Validation()
+    {
+        foreach (var skill in skills.Where(x => x.Selector == "myselector"))
+        {
+            if (string.IsNullOrWhiteSpace(skill.SkillName))
+            {
+                ShowNotification(Severity.Warning, "Не все поля заполнены");//Не все поля заполнены
+                return ValidationCode.EmptyFieldsNames;
+            }
+        }
+
+        //Проверка дубликатов
+        if (CheckDuplicates() > 0)
+        {
+            ShowNotification(Severity.Warning, "Дубликаты не допустимы");
+            return ValidationCode.DuplicateFields;
+        }
+
+        return ValidationCode.ValidationSuccess;
+    }
+
+    private int CheckDuplicates()
+    {
+        var skillsWithoutdeleted = skills.Where(x => x.Selector != "deleted");
+        List<Skill> unique = new();
+        List<Skill> duplicates = new();
+
+        foreach (var skill in skillsWithoutdeleted)
+        {
+            if (unique.Contains(skill))
+            {
+                duplicates.Add(skill);
+            }
+            else
+            {
+                unique.Add(skill);
+            }
+        }
+
+        return duplicates.Count;
+    }
+
+
+
+    private async void Save()
+    {
+        try
+        {
+            _processing = true; await Task.Delay(1);
+
+            var validation = Validation();
+            if (validation != ValidationCode.ValidationSuccess)
+            {
+                return;
+            }
+
+            skillService.SaveOrUpdateMany(skills);
+
+            Reset();
+            ShowNotification(Severity.Success, "Навыки обновлены");
+        }
+        catch (Exception ex)
+        {
+            Reset();
+            ShowNotification(Severity.Error, "Ошибка сохранения данных");
+            Console.WriteLine("Save_Exception: " + ex.Message);
+            return;
+        }
+        finally
+        {
+            _processing = false;
+            Refresh();
+            StateHasChanged();
+        }
+    }
+    private void Reset()
+    {
+        skills.Clear();
+        GetSkills();
+        Refresh();
+        StateHasChanged();
+    }
+    private void Delete(string id)
+    {
+        var skill = skills.Find(x => x.Id == id);
+        skill.Selector = "deleted";//скрыть
+
+        //!!!сделать пересчет позиций
+
+        Refresh();
+        StateHasChanged();
+    }
+}

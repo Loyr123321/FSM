@@ -1,0 +1,195 @@
+﻿@page "/changepass"
+@attribute [Authorize(Policy = "RequireRole")]
+@using BlazorApp1.Auth;
+@using BlazorApp1.Models
+@using BlazorApp1.Services
+@using BlazorApp1.Utils;
+@using Microsoft.AspNetCore.Authentication;
+@using Microsoft.IdentityModel.JsonWebTokens;
+@using MongoDB.Driver;
+@using MudBlazor.Utilities
+@using Newtonsoft.Json;
+@using Radzen;
+@using System.Security.Claims;
+@using static BlazorApp1.Utils.Utils;
+@using static BlazorApp1.Auth.AuthOptions;
+@inject ILoggerFactory LoggerFactory
+@inject ISnackbar Snackbar
+@inject NavigationManager navigationManager
+@inject UserService userService
+@inject IHttpContextAccessor HttpContextAccessor
+@inject MailService mailService
+
+<link rel="stylesheet" href="_content/Radzen.Blazor/css/material-base.css">
+
+@if (errorCode == null && currentUser != null)
+{
+    <EditForm Model="@currentUserPasswordView" OnValidSubmit="@SavePasswordView">
+        @*Отключить валидацию для скрытых полей либо создать оддельный класс для редактирования*@
+        <Blazored.FluentValidation.FluentValidationValidator></Blazored.FluentValidation.FluentValidationValidator>
+        <ValidationSummary />
+        <div class="row d-flex justify-content-center">
+            <div class="col-12 col-xs-12 col-md-6 col-lg-6 my_form">
+                <div class="row">
+                    <div class="col-12">
+                        <div class="x_icon" @onclick="@(e=>CloseWindow())"></div>
+                    </div>
+                </div>
+                <h3>Изменить пароль</h3>
+                <div class="row" style="margin-top: 10px;">
+
+                    <div class="col-md-12">
+                        <label>Пароль:</label>
+                        <InputText type="password" @bind-Value=currentUserPasswordView.OldPass class="form-control form_input_plnd" style="width:100%;" />
+                        <ValidationMessage For="() => currentUserPasswordView.OldPass" />
+                    </div>
+                    <div class="col-md-12">
+                        <label>Новый пароль:</label>
+                        <InputText type="password" @bind-Value=currentUserPasswordView.Password class="form-control form_input_plnd" style="width:100%;" />
+                        <ValidationMessage For="() => currentUserPasswordView.Password" />
+                    </div>
+                    <div class="col-md-12">
+                        <label>Подтверждение пароля:</label>
+                        <InputText type="password" @bind-Value=currentUserPasswordView.ConfirmPassword class="form-control form_input_plnd" style="width:100%;" />
+                        <ValidationMessage For="() => currentUserPasswordView.ConfirmPassword" />
+                    </div>
+
+                   
+
+                    <div style="float: right; text-align: right;">
+                        <MudButton Disabled="@_processing" Variant="MudBlazor.Variant.Filled" Color="Color.Primary" ButtonType="MudBlazor.ButtonType.Submit">
+                            <MudText>Сохранить</MudText>
+                        </MudButton>
+                    </div>
+
+                </div>
+
+            </div>
+        </div>
+    </EditForm>
+}
+else
+{
+    @if (errorCode == null)
+    {
+        <div>Неверные данные для изменения пользователя</div>
+    }
+    else
+    {
+        <div>@ErrorHandling.GetErrorMessage((int)errorCode)</div>
+    }
+
+}
+
+
+@code {
+
+    [Parameter]
+    [SupplyParameterFromQuery]
+    public string id { get; set; }
+
+    [Parameter]
+    [SupplyParameterFromQuery]
+    public int? errorCode { get; set; }
+
+    [CascadingParameter]
+    private Task<AuthenticationState> authenticationStateTask { get; set; }
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            //id пустой
+            if (string.IsNullOrEmpty(id))
+            {
+                errorCode = (int)ErrorHandling.ErrorCodes.ERROR_USER_NOT_FOUND;
+                return;
+            }
+
+            //Id смого юзера
+            var myid = authenticationStateTask?.Result?.User?.Claims?.Where(t => t.Type == "UserId")?.FirstOrDefault()?.Value;
+
+            if (id == myid)
+            {
+                currentUser = userService.GetOne(id);
+                currentUserPasswordView = new();
+                if (currentUser == null || currentUserPasswordView == null)
+                {
+                    errorCode = (int)ErrorHandling.ErrorCodes.ERROR_USER_NOT_FOUND;
+                    return;
+                }
+
+                //Занулять не нужно. Поля паролей не будут выводиться
+                //currentUser.Password = string.Empty;
+                //currentUser.ConfirmPassword = string.Empty;
+
+                StateHasChanged();
+            }
+            else
+            {
+                errorCode = (int)ErrorHandling.ErrorCodes.ERROR_USER_ACCESS_DENY;
+                return;
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("ChangeUserPage_OnInitializedAsync_Exception: " + ex.Message);
+            errorCode = (int)ErrorHandling.ErrorCodes.ERROR_UNKNOWN;
+            return;
+        }
+    }
+
+    private UserPasswordView? currentUserPasswordView = null;
+    private User? currentUser = null;
+    private bool _processing = false;
+    private async Task SavePasswordView()
+    {
+        try
+        {
+            _processing = true; await Task.Delay(1);
+
+            bool access = SecretHasher.Verify(currentUserPasswordView.OldPass, currentUser.Password);
+            if (access == false)
+            {
+                ShowNotification(Severity.Warning, "Неверный пароль");
+                return;
+            }
+            currentUser.Password = currentUser.GetHash(currentUserPasswordView.Password);
+            userService.SaveOrUpdate(currentUser);
+            ShowNotification(MudBlazor.Severity.Success, "Успешно сохранено");
+            currentUserPasswordView.OldPass = string.Empty;
+            currentUserPasswordView.Password = string.Empty;
+            currentUserPasswordView.ConfirmPassword = string.Empty;
+        }
+        catch (MongoWriteException ex)
+        {
+            if (ex.WriteError.Category == ServerErrorCategory.DuplicateKey)
+            {
+                // обработка ошибки дубликата ключа
+                ShowNotification(MudBlazor.Severity.Warning, "Пользователь с таким email уже существует");
+                return;
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("ChangePassPage_Save_Exception: " + ex.Message);
+            ShowNotification(MudBlazor.Severity.Error, "Ошибка сохранения данных");
+            return;
+        }
+        finally
+        {
+            _processing = false;
+            StateHasChanged();
+        }
+    }
+
+    private void CloseWindow()
+    {
+        navigationManager.NavigateTo("/account");
+    }
+
+    private void ShowNotification(MudBlazor.Severity severity, string text)
+    {
+        Snackbar.Clear();
+        Snackbar.Add(text, severity);
+    }
+}

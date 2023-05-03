@@ -1,0 +1,382 @@
+﻿@page "/employees"
+@attribute [Authorize(Roles = "Admin,Dispatcher")]
+@*@attribute [Authorize(Policy = "RequireRole")]*@
+@using BlazorApp1.Models
+@using BlazorApp1.Services
+@using BlazorApp1.Views
+@using MudBlazor.Utilities
+@using Radzen;
+@inject ILoggerFactory LoggerFactory
+@inject Services.EmployeeService employeeService
+@inject DataListService dataListService
+
+@inject ISnackbar Snackbar
+@inject NavigationManager NavigationManager
+
+<link rel="stylesheet" href="_content/Radzen.Blazor/css/material-base.css">
+<div class="row">
+
+    <div class="col-12 d-flex flex-wrap align-center">
+
+        <h1>Мастера</h1>
+        <MudButton Class="ms-0 ms-sm-2  button_add_to_data" OnClick='() => NavigationManager.NavigateTo("/employee")'>
+            <MudText Class="button_add_to_data_text">Новый мастер</MudText>
+        </MudButton>
+        <div class="ms-sm-auto ms-0  dropdown_export_button">
+            <RadzenMenu>
+                <RadzenMenuItem Text="Выгрузить в Excel" Icon="description">
+                    <button class="button_export_page_xls" @onclick="@(args => Export(isOnlyPage: true))">Экспорт страницы XLS</button>
+                    <button class="button_export_page_xls" @onclick="@(args => Export(isOnlyPage: false))">Экспорт всех страниц XLS</button>
+                </RadzenMenuItem>
+
+            </RadzenMenu>
+        </div>
+    </div>
+
+    <div class="col-12">
+        <RadzenDataGrid Data="@employees" TItem="Employee"
+                        Density="Density.Compact"
+                        GridLines="DataGridGridLines.Both"
+                        AllowAlternatingRows="false"
+                        PagerHorizontalAlign="HorizontalAlign.Right"
+                        AllowPaging="true"
+                        PageNumbersCount="3"
+                        PageSize="25"
+                        PageSizeOptions="new int[] { 25, 50, 100, 250 }"
+                        ShowPagingSummary="true"
+                        PagingSummaryFormat=@pagingSummaryFormat
+                        FilterMode="FilterMode.Simple"
+                        LogicalFilterOperator="LogicalFilterOperator.Or"
+                        AllowFiltering="true"
+                        AllowColumnPicking="false"
+                        ColumnsShowingText="столбцов выбрано"
+                        ColumnsText="Столбцы"
+                        AllowSorting="true"
+                        Style="height:calc(100vh - 150px);border-radius: 10px!important;border: 1px solid #D9D9D9!important;"
+
+                        AllowColumnResize="false"
+                        ColumnResized=@OnColumnResized
+                        RowRender="RowRender"
+                        RowClick="RowClick"
+                        EmptyText="Мастера не найдены"
+                        PageSizeText="элементов на странице"
+                        class="gridTable"
+                        @ref="grid">
+            <Columns>
+                <!---->
+
+                <RadzenDataGridColumn TItem="Employee" Title="Мастер" Sortable="true" SortProperty="LastName" Filterable="true" HeaderCssClass="header_table">
+                    <FilterTemplate>
+                        <RadzenTextBox @oninput="@(e=> @OnFilterChange(e, ref filterName))" Style="width:100%;" Class="w-100" />
+                    </FilterTemplate>
+
+                    <Template Context="context">
+                        @if (!string.IsNullOrEmpty(context.GetFullName()))
+                        {
+                            <a href="/employee?id=@context.Id" style="text-decoration: none;">
+                                <div class="table_font" style="white-space:pre-wrap">@context.GetFullName()</div>
+                            </a>
+                        }
+                    </Template>
+                </RadzenDataGridColumn>
+
+
+                <RadzenDataGridColumn TItem="Employee" Title="Специализация" Sortable="false" SortProperty="LastName" Filterable="true" HeaderCssClass="header_table">
+                    <FilterTemplate>
+                        <RadzenTextBox @oninput="@(e=> @OnFilterChange(e, ref filterOrderType))" Style="width:100%;" Class="w-100" />
+                    </FilterTemplate>
+
+                    <Template Context="context">
+                        @if (context.OrderTypes != null)
+                        {
+                            foreach (var orderType in context.OrderTypes)
+                            {
+                                <a href="/employee?id=@context.Id" style="text-decoration: none;">
+                                    <div class="table_font" style="white-space:pre-wrap">@orderType.ShortName</div>
+                                </a>
+                            }
+                        }
+                    </Template>
+                </RadzenDataGridColumn>
+
+
+                <RadzenDataGridColumn TItem="Employee" Title="Телефон" Sortable="false" Filterable="true" HeaderCssClass="header_table">
+                    <FilterTemplate>
+                        <RadzenTextBox @bind-Value="@filterPhone" @oninput="@(e=> @OnFilterChange(e, ref filterPhone))" Style="width:100%;" Class="w-100" />
+                    </FilterTemplate>
+
+                    <Template Context="context">
+                        @if (!string.IsNullOrEmpty(context.Phone))
+                        {
+                            <a href="/employee?id=@context.Id" style="text-decoration: none;">
+                                <div class="table_font" style="white-space:pre-wrap">@context.Phone</div>
+                            </a>
+                        }
+                    </Template>
+                </RadzenDataGridColumn>
+
+                @*<RadzenDataGridColumn TItem="Employee" Title="Навыки" Sortable="false" Filterable="true">
+                <FilterTemplate>
+                <RadzenTextBox @bind-Value="@filterSkill" Change=@FilterRecords Style="width:100%;" Class="w-100" />
+                </FilterTemplate>
+
+                <Template Context="context">
+                <div class="myflexwrap">
+                @if (context.Skills != null && context.Skills.Count > 0)
+                {
+                foreach (var skill in context.Skills)
+                {
+                <a href="/employee?id=@context.Id" style="text-decoration: none;">
+                <span class="skill">@skill.SkillName</span>
+                </a>
+                }
+                }
+                </div>
+                </Template>
+                </RadzenDataGridColumn>*@
+
+                <RadzenDataGridColumn TItem="Employee" Title="Регион" Sortable="false" Filterable="true" HeaderCssClass="header_table">
+                    <FilterTemplate>
+                        @*<RadzenTextBox @bind-Value="@filterRegion" Change=@FilterRecords Style="width:100%;" Class="w-100" @onkeydown="() => FilterRecords(null)" />*@
+                        <RadzenTextBox @bind-Value="@filterRegion" @oninput="@(e=> @OnFilterChange(e, ref filterRegion))" Style="width:100%;" Class="w-100" />
+                    </FilterTemplate>
+                    <Template Context="context">
+                        @if (context.Regions != null && context.Regions.Count > 0)
+                        {
+                            SortedSet<string> names = new();
+                            foreach (var name in context.Regions)
+                            {
+                                names.Add(name.RegionName);
+                            }
+
+                            foreach (var name in names)
+                            {
+                                <a href="/employee?id=@context.Id" style="text-decoration: none;">
+                                    <div class="table_font" style="white-space:pre-wrap">@name</div>
+                                </a>
+                            }
+                        }
+                    </Template>
+                </RadzenDataGridColumn>
+
+                <RadzenDataGridColumn TItem="Employee" Title="Договор" Sortable="false" SortProperty="LastName" Filterable="true" HeaderCssClass="header_table">
+                    <FilterTemplate>
+                        @*<RadzenTextBox @oninput="@(e=> @Debug(e, ref filterContract))" Style="width:100%;" Class="w-100" />*@
+
+                        <RadzenDropDown @bind-Value=@filterContract Change=@(() =>OnFilterChange(null, ref filterContract)) Data=@contractTypes />
+
+                    </FilterTemplate>
+
+                    <Template Context="context">
+                        @if (context.Contract != null)
+                        {
+                            <a href="/employee?id=@context.Id" style="text-decoration: none;">
+
+                                @switch (context.Contract.ContractType)
+                                {
+                                    case ("Physical"):
+                                        {
+                                            <div class="table_font">Да(ФЛ)</div>
+                                            break;
+                                        }
+                                    case ("IndividualEntrepreneur"):
+                                        {
+                                            <div class="table_font">Да(ИП)</div>
+                                            break;
+                                        }
+                                    case ("LimitedLiabilityCompany"):
+                                        {
+                                            <div class="table_font">Да(ООО)</div>
+                                            break;
+                                        }
+                                }
+
+                            </a>
+                        }
+                        else
+                        {
+                            <a href="/employee?id=@context.Id" style="text-decoration: none;">
+                                <div class="table_font">
+                                    Нет
+                                </div>
+                            </a>
+                        }
+                    </Template>
+                </RadzenDataGridColumn>
+
+            </Columns>
+        </RadzenDataGrid>
+    </div>
+</div>
+
+
+
+
+
+
+
+@code
+{
+    //RadzenGrid<Employee> grid;
+
+    private void OnFilterChange(ChangeEventArgs e, ref string myref)
+    {
+
+        //filterName = e.Value.ToString();
+        if(e!=null)
+            myref = e.Value.ToString();
+        FilterRecords(null);
+    }
+
+    private string? filterName;
+    private string? filterPhone;
+    private string? filterOrderType;
+    private string? filterSkill;
+    private string? filterRegion;
+
+    private string? filterContract;
+    private IEnumerable<string> contractTypes = new List<string>() { "Все", "Да", "Да(ФЛ)", "Да(ИП)", "Да(ООО)", "Нет" };
+    private void FilterRecords(object value)
+    {
+
+        employees.Clear();
+        employees.AddRange(allEmployees);
+
+        if (!string.IsNullOrEmpty(filterName))
+        {
+            employees = employees.Where(x => !string.IsNullOrEmpty(x.GetFullName()) && x.GetFullName().ToLower().Contains(filterName.ToLower())).ToList();
+        }
+        if (!string.IsNullOrEmpty(filterPhone))
+        {
+            employees = employees.Where(x => !string.IsNullOrEmpty(x.Phone) && x.Phone.ToLower().Contains(filterPhone.ToLower())).ToList();
+        }
+        if (!string.IsNullOrEmpty(filterOrderType))
+        {
+            employees = employees.Where(e => e.OrderTypes != null && e.OrderTypes.Any(ot => ot.ShortName.ToLower().Contains(filterOrderType.ToLower()))).ToList();
+        }
+        if (!string.IsNullOrEmpty(filterContract))
+        {
+            if (filterContract == "Да")
+            {
+                employees = employees.Where(x => x.Contract != null).ToList();
+            }
+            if (filterContract == "Нет")
+            {
+                employees = employees.Where(x => x.Contract == null).ToList();
+            }
+            if (filterContract == "Да(ФЛ)")
+            {
+                employees = employees.Where(x => x.Contract != null && x.Contract.ContractType == ContractType.Physical.ToString()).ToList();
+            }
+            if (filterContract == "Да(ИП)")
+            {
+                employees = employees.Where(x => x.Contract != null && x.Contract.ContractType == ContractType.IndividualEntrepreneur.ToString()).ToList();
+            }
+            if (filterContract == "Да(ООО)")
+            {
+                employees = employees.Where(x => x.Contract != null && x.Contract.ContractType == ContractType.LimitedLiabilityCompany.ToString()).ToList();
+            }
+        }
+        if (!string.IsNullOrEmpty(filterSkill))
+        {
+            employees = employees.Where(e => e.Skills != null && e.Skills.Any(s => s.SkillName.ToLower().Contains(filterSkill.ToLower()))).ToList();
+        }
+        if (!string.IsNullOrEmpty(filterRegion))
+        {
+            employees = employees.Where(e => e.Regions != null && e.Regions.Any(r => r.RegionName.ToLower().Contains(filterRegion.ToLower()))).ToList();
+        }
+
+        employees = employees.ToList(); //Update Table if filters == null
+
+
+    }
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        GetEmployees();
+    }
+
+    public List<Employee> allEmployees = new List<Employee>();
+    public List<Employee> employees = new List<Employee>();
+
+    public void GetEmployees()
+    {
+        allEmployees = employeeService.GetAll().OrderBy(x => x.LastName).ToList();
+        employees = employeeService.GetAll().OrderBy(x => x.LastName).ToList();
+    }
+
+    private void RowRender(RowRenderEventArgs<Employee> args)
+    {
+        //args.Attributes.Add("class", "STATUS_" + args.Data.OrderStatus.StatusCode);
+        args.Attributes.Add("class", "hover_on_row");
+    }
+
+    private void RowClick(DataGridRowMouseEventArgs<Employee> args)
+    {
+        var id = args.Data.Id;
+        NavigationManager.NavigateTo($"/employee?id={id}");
+    }
+
+    private void OnColumnResized(DataGridColumnResizedEventArgs<Employee> args)
+    {
+        //console.Log($"Resized {args.Column.Title} to {args.Width} pixels");
+    }
+
+    RadzenDataGrid<Employee> grid;
+
+    public void Export(bool isOnlyPage)
+    {
+        try
+        {
+            var columns = grid.ColumnsCollection;
+            HashSet<string> headers = new();
+            foreach (var column in columns)
+            {
+                headers.Add(column.Title);
+            }
+
+            //Записи только активной на странице
+            if (isOnlyPage == true)
+            {
+                var currentPage = grid.CurrentPage;
+                var pageSize = grid.PageSize; //Кол-во записей на странице
+                                              //var pagesCount = grid.PageNumbersCount; //Кол-во страниц
+
+                List<Employee> list = new();
+                int start = currentPage * pageSize;
+                int end = (currentPage * pageSize) + pageSize;
+                
+                for (int i = start; i < end; i++)
+                {
+                    try
+                    {
+                        list.Add(employees[i]);
+                    }
+                    catch { }
+                }
+                var url = Utils.ExcelUtils.Employees("Лист1", headers.ToList(), list);
+                NavigationManager.NavigateTo("/TempDir/" + url, true, true);
+            }
+            else
+            {
+                var url = Utils.ExcelUtils.Employees("Лист1", headers.ToList(), employees);
+                NavigationManager.NavigateTo("/TempDir/" + url, true, true);
+            }
+        }
+        catch (Exception ex)
+        {
+            ShowNotification(Severity.Warning, "Неизвестная ошибка экспорта в Excel");
+            Console.WriteLine("EmployeesPage_Export_Exception: " + ex.Message);
+        }
+
+    }
+
+    
+    private void ShowNotification(Severity severity, string text)
+    {
+        Snackbar.Clear();
+        Snackbar.Add(text, severity);
+    }
+    string pagingSummaryFormat = "Страница {0} из {1} (всего {2} записи/-ей)";
+}

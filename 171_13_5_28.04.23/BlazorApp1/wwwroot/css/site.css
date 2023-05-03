@@ -1,0 +1,2118 @@
+@import url('open-iconic/font/css/open-iconic-bootstrap.min.css');
+
+
+
+
+
+
+html, body {
+    /* font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;*/
+    font-family: 'Inter',sans-serif !important;
+    background-color: #fff;
+    /*height: 100%;*/
+}
+
+/*Название шаблона*/
+.template_name {
+    margin: 0;
+    padding: 0;
+    font-size: 18pt;
+}
+
+
+.content {
+    padding-top: 1.1rem;
+}
+
+.valid.modified:not([type=checkbox]) {
+    outline: 1px solid #26b050;
+}
+
+.invalid {
+    outline: 1px solid red;
+}
+
+.validation-message {
+    margin: 0;
+    padding: 0;
+    margin-bottom: 10px;
+    color: red;
+    font-size: 90%;
+}
+
+#blazor-error-ui {
+    background: lightyellow;
+    bottom: 0;
+    box-shadow: 0 -1px 2px rgba(0, 0, 0, 0.2);
+    display: none;
+    left: 0;
+    padding: 0.6rem 1.25rem 0.7rem 1.25rem;
+    position: fixed;
+    width: 100%;
+    z-index: 1000;
+}
+
+    #blazor-error-ui .dismiss {
+        cursor: pointer;
+        position: absolute;
+        right: 0.75rem;
+        top: 0.5rem;
+    }
+
+.blazor-error-boundary {
+    background: url(data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTYiIGhlaWdodD0iNDkiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIG92ZXJmbG93PSJoaWRkZW4iPjxkZWZzPjxjbGlwUGF0aCBpZD0iY2xpcDAiPjxyZWN0IHg9IjIzNSIgeT0iNTEiIHdpZHRoPSI1NiIgaGVpZ2h0PSI0OSIvPjwvY2xpcFBhdGg+PC9kZWZzPjxnIGNsaXAtcGF0aD0idXJsKCNjbGlwMCkiIHRyYW5zZm9ybT0idHJhbnNsYXRlKC0yMzUgLTUxKSI+PHBhdGggZD0iTTI2My41MDYgNTFDMjY0LjcxNyA1MSAyNjUuODEzIDUxLjQ4MzcgMjY2LjYwNiA1Mi4yNjU4TDI2Ny4wNTIgNTIuNzk4NyAyNjcuNTM5IDUzLjYyODMgMjkwLjE4NSA5Mi4xODMxIDI5MC41NDUgOTIuNzk1IDI5MC42NTYgOTIuOTk2QzI5MC44NzcgOTMuNTEzIDI5MSA5NC4wODE1IDI5MSA5NC42NzgyIDI5MSA5Ny4wNjUxIDI4OS4wMzggOTkgMjg2LjYxNyA5OUwyNDAuMzgzIDk5QzIzNy45NjMgOTkgMjM2IDk3LjA2NTEgMjM2IDk0LjY3ODIgMjM2IDk0LjM3OTkgMjM2LjAzMSA5NC4wODg2IDIzNi4wODkgOTMuODA3MkwyMzYuMzM4IDkzLjAxNjIgMjM2Ljg1OCA5Mi4xMzE0IDI1OS40NzMgNTMuNjI5NCAyNTkuOTYxIDUyLjc5ODUgMjYwLjQwNyA1Mi4yNjU4QzI2MS4yIDUxLjQ4MzcgMjYyLjI5NiA1MSAyNjMuNTA2IDUxWk0yNjMuNTg2IDY2LjAxODNDMjYwLjczNyA2Ni4wMTgzIDI1OS4zMTMgNjcuMTI0NSAyNTkuMzEzIDY5LjMzNyAyNTkuMzEzIDY5LjYxMDIgMjU5LjMzMiA2OS44NjA4IDI1OS4zNzEgNzAuMDg4N0wyNjEuNzk1IDg0LjAxNjEgMjY1LjM4IDg0LjAxNjEgMjY3LjgyMSA2OS43NDc1QzI2Ny44NiA2OS43MzA5IDI2Ny44NzkgNjkuNTg3NyAyNjcuODc5IDY5LjMxNzkgMjY3Ljg3OSA2Ny4xMTgyIDI2Ni40NDggNjYuMDE4MyAyNjMuNTg2IDY2LjAxODNaTTI2My41NzYgODYuMDU0N0MyNjEuMDQ5IDg2LjA1NDcgMjU5Ljc4NiA4Ny4zMDA1IDI1OS43ODYgODkuNzkyMSAyNTkuNzg2IDkyLjI4MzcgMjYxLjA0OSA5My41Mjk1IDI2My41NzYgOTMuNTI5NSAyNjYuMTE2IDkzLjUyOTUgMjY3LjM4NyA5Mi4yODM3IDI2Ny4zODcgODkuNzkyMSAyNjcuMzg3IDg3LjMwMDUgMjY2LjExNiA4Ni4wNTQ3IDI2My41NzYgODYuMDU0N1oiIGZpbGw9IiNGRkU1MDAiIGZpbGwtcnVsZT0iZXZlbm9kZCIvPjwvZz48L3N2Zz4=) no-repeat 1rem/1.8rem, #b32121;
+    padding: 1rem 1rem 1rem 3.7rem;
+    color: white;
+}
+
+    .blazor-error-boundary::after {
+        content: "An error has occurred."
+    }
+
+/*Кнопки Типа Клиента*/
+.btn_client_type_re {
+    background-color: #fff;
+    color: var(--color-ordinary);
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    padding: 10px 20px;
+    width: 126px;
+    min-height: 44px;
+    /* Blue Light */
+    border: 2px #D0EBFF solid;
+}
+/*Если в новом клиента нажата кнопка, сменить стиль*/
+.btn_r1_pressed {
+    background-color: var(--color-s-prim);
+    color: #fff;
+}
+/*Стиль текста в кнопках нового клиента*/
+.btn_client_type_re_text {
+    font-style: normal;
+    font-weight: 400;
+    font-size: var(--button-sc-text-font-size);
+    line-height: 24px;
+    color: var(--color-ordinary);
+}
+/*Скругление первой кнопки в новом клиенте*/
+button.btn_client_type_re:first-child {
+    border-radius: 10px 0px 0px 10px
+}
+/*Скругление второй кнопки в новом клиенте*/
+button.btn_client_type_re:nth-child(2) {
+    border-radius: 0px 10px 10px 0px
+}
+
+
+/*Стилизация инпутов*/
+.form_input_plnd {
+    border: 1px solid #959595 !important;
+    border-radius: 10px !important;
+    display: block !important;
+    width: 100% !important;
+    height: 42px !important;
+    padding: 6px 12px !important;
+    font-size:var(--in-font-size)
+}
+
+/*Для Радзена датаТАйм в полях*/
+.form_input_radzen_dt {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+}
+/*Для радзена dropdown*/
+.data_input_creating {
+    box-sizing: border-box;
+    width: 100%;
+    min-height: 42px !important;
+    border: 1px solid #959595 !important;
+    border-radius: 10px !important;
+    display: block;
+}
+
+/*Просто z индекс*/
+.z_101 {
+    z-index: 101;
+}
+
+.mynotification {
+    background-color: #f9f9f9;
+    --bs-toast-zindex: 1090;
+    --bs-toast-padding-x: 0.75rem;
+    --bs-toast-padding-y: 0.5rem;
+    --bs-toast-spacing: 1.5rem;
+    --bs-toast-max-width: 350px;
+    --bs-toast-font-size: 0.875rem;
+    --bs-toast-color:;
+    --bs-toast-bg: rgba(255, 255, 255, 0.85);
+    --bs-toast-border-width: 1px;
+    --bs-toast-border-color: var(--bs-border-color-translucent);
+    --bs-toast-border-radius: 0.375rem;
+    --bs-toast-box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    --bs-toast-header-color: #6c757d;
+    --bs-toast-header-bg: rgba(255, 255, 255, 0.85);
+    --bs-toast-header-border-color: rgba(0, 0, 0, 0.05);
+    width: var(--bs-toast-max-width);
+    max-width: 100%;
+    font-size: var(--bs-toast-font-size);
+    color: var(--bs-toast-color);
+    pointer-events: auto;
+    background-clip: padding-box;
+    border: var(--bs-toast-border-width) solid var(--bs-toast-border-color);
+    box-shadow: var(--bs-toast-box-shadow);
+    border-radius: var(--bs-toast-border-radius);
+    -webkit-animation: fadein 1s; /* Safari, Chrome and Opera > 12.1 */
+    -moz-animation: fadein 1s; /* Firefox < 16 */
+    -ms-animation: fadein 1s; /* Internet Explorer */
+    -o-animation: fadein 1s; /* Opera < 12.1 */
+    animation: fadein 1s;
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    margin-right: 1rem;
+    margin-bottom: 1rem;
+    z-index: 999;
+}
+
+
+
+@keyframes fadein {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+/* Firefox < 16 */
+@-moz-keyframes fadein {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+/* Safari, Chrome and Opera > 12.1 */
+@-webkit-keyframes fadein {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+/* Internet Explorer */
+@-ms-keyframes fadein {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+/* Opera < 12.1 */
+@-o-keyframes fadein {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+
+/*Стилизация фона в настройках для поля*/
+.add_filed_dropdown {
+    width: 100%;
+    padding: 10px;
+    padding-left: 0px;
+}
+
+/*Новые иконки*/
+.img_FTDefault {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    min-width: 30px;
+    min-height: 30px;
+    background-repeat: no-repeat;
+    background-position: center;
+}
+
+.img_FTText {
+    background-image: url("../img/FTText.svg");
+    /*border: 1px red solid;*/
+}
+
+.img_FTFile {
+    background-image: url("../img/FTFile.svg");
+    /*border: 1px blue solid;*/
+}
+
+.img_FTLink {
+    background-image: url("../img/FTLink.svg");
+    /*border: 1px green solid;*/
+}
+
+.img_FTList {
+    background-image: url("../img/FTList.svg");
+    /*border: 1px yellow solid;*/
+}
+
+.img_FTRuble {
+    background-image: url("../img/FTRuble.svg");
+    /*border: 1px black solid;*/
+}
+
+.img_FTDouble {
+    background-image: url("../img/FTDouble.svg");
+    background-size: contain !important;
+    /*border: 1px black solid;*/
+}
+
+.img_FTLong {
+    background-image: url("../img/FTLong.svg");
+    /*border: 1px pink solid;*/
+}
+
+.img_FTDate {
+    background-image: url("../img/FTDate.svg");
+    /*border: 1px #D0EBFF solid;*/
+}
+
+.img_FTDateTime {
+    background-image: url("../img/FTDateTime.svg");
+    /*border: 1px #006EBE solid;*/
+}
+
+.img_FTPhoto {
+    background-image: url("../img/FTPhoto.svg");
+    /*border: 1px rgba(0,255,0,0.1) solid;*/
+}
+
+.img_FTYesNo {
+    background-image: url("../img/FTYesNo.svg");
+    /*border: 1px rgba(255,255,0,0.1) solid;*/
+}
+
+.img_DragDrop {
+    background-image: url(../img/drag-n-drop.svg);
+}
+
+.img_Settings {
+    background-image: url("../img/Settings.svg");
+    cursor: pointer;
+    background-color: rgba(0,0,0,0.02);
+    /* width: 40px;
+    height: 40px;*/
+    border-radius: 8px;
+    display: inline-flex;
+    align-self: center;
+    position: relative;
+    width: 50%;
+    height: 50%;
+}
+
+.img_Delete {
+    background-image: url("../img/Delete.svg");
+    cursor: pointer;
+    background-color: rgba(0,0,0,0.02);
+    /* width: 40px;
+    height: 40px;*/
+    border-radius: 8px;
+    display: inline-flex;
+    align-self: center;
+    position: relative;
+    width: 50%;
+    height: 50%;
+}
+
+
+.dragdrop_button {
+    width: 18px;
+    height: 28px;
+    /*    margin-left: 20px;*/
+    /*    z-index: 101;*/
+    background-image: url(../img/drag-n-drop.svg);
+    background-repeat: no-repeat;
+    cursor: grab !important;
+}
+
+
+/*  mud*/
+:root {
+    --mud-palette-primary: #1d89cf !important;
+    --mud-palette-primary-rgb: 29,137,207 !important;
+    --mud-palette-primary-text: #ffffffff !important;
+    --mud-palette-primary-darken: rgb(60,120,159) !important;
+    --mud-palette-primary-lighten: rgb(0,154,255) !important;
+    --mud-palette-primary-hover: rgba(0,154,255,0.058823529411764705) !important;
+    /*  radzen*/
+    --rz-primary: #1d89cf !important;
+    --rz-checkbox-checked-hover-background-color: #1d89cf !important;
+    --rz-primary-lighter: rgba(0,154,255,0.058823529411764705) !important;
+    /*  Цвет в календаре*/
+    --rz-datepicker-calendar-selected-background-color: green !important;
+    --rz-datepicker-calendar-selected-hover-background-color: green !important;
+    /*-------------------------------------------Мои переменные------------------------------*/
+
+    --color-prim: #F1F5FE; /*Бледно голубой. Используется для: хедера в таблицах, ховера в таблицах на строку, фона для меню, кнопках табуляции*/
+    --color-s-prim: #D0EBFF; /*Более насыщенный бледно голубой. Используется: в кнопках табуляции,*/
+    --color-ordinary: #000000; /*Черный. Используется для: хедера шрифта,данных таблицы,табуляции текста,текста по всей странице*/
+    --menu-text-font-color: #959595; /*Серый. Текст меню*/
+    --color-secondary: #56B0F2; /*---Голубой цвет. Используется:Кнопке сохранения,кнопка изменить,загрузить файл, кнопка добавления нового клиента и мастера, создать новый список и регион----*/
+    --color-dis: #f44336ff; /*Красный цвет. Для кнопок удаления*/
+    --button-font-color: #fff; /*Белый. Используется для: цвета шрифта в кнопках добавления мастера и клиента,сохранения*/
+    --color-small-feat: #006EBE; /*Темно голубой. Используется для добавления контактов, типов, навыков и т.д., в активной менюшке, кнопка отменить цвет*/
+    --button-sc-text-font-size: 20px; /*ОБЩИЙ РАЗМЕР ШРИФТА ДЛЯ КНОПОК. Также используется в экспорте*/
+    --button-dnwl-size: 16px; /*Кнопка загрузки файла и подсписок выгрузки в excel*/
+    /*--КНОПКА ОТМЕНИТЬ------------------------*/
+    --button-discard-bg: none;
+    --button-add-dnd-font-size: 18px; /*--КНОПКА ДОБАВИТЬ ТИП/НАВЫК...*/
+    --button-value-del-bg: #F0F2F5; /*---Серый. КНОПКА УДАЛИТЬ ЗНАЧЕНИЕ В ДРАГ-ДРОПЕ*/
+    /*-----КНОПКА ЭКСПОРТА----*/
+    --btn-export-color: green;
+    --btn-export-bg: #F0F2F5;
+    --btn-export-font-size: var(--button-sc-text-font-size);
+    --in-font-size: 18px; /*Шрифт инпутов всех*/
+    --label-font-size: 18px; /*Шрифт лейблов всех*/
+    --label-sm-font-size: 16px; /*Шрифт маленьких лейблов всех*/
+    --tb-font: 15px; /*Шрифт данных в таблице*/
+    --hover-color: #F0F2F5; /*Цвет ховера в регионах и списках знач*/
+    /*УБРАЛ ВЕЗДЕ VARIANT="MUDBLAZOR.VARIANT.FILLED, чтобы убрать тень у кнопок */
+    --table-data-pad: 0.25rem 0.5rem; /*Паддинг для даты в таблицах*/
+}
+
+/*  При выборе автомат. адреса занимает весь экран*/
+.mud-overlay {
+    z-index: 999;
+}
+
+/*Общий контейнер для всех кнопок табуляции в мастере*/
+.mytabmenu {
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+}
+/*Стиль кнопки в табуляции мастера*/
+.mytab_button {
+    margin: 0;
+    padding: 0;
+    padding: 20px;
+    width: 180px;
+    height: 64px;
+    display: inline-block;
+    font-style: normal;
+    font-weight: 500;
+    font-size: var(--button-sc-text-font-size);
+    line-height: 24px;
+    color: var(--color-ordinary);
+    text-align: center;
+    background-color: var(--color-prim);
+    cursor: pointer;
+}
+/* Границы и закрашивание кнопок табуляции в мастере*/
+.left_bradius {
+    border-radius: 10px 0px 0px 10px;
+}
+
+.right_bradius {
+    border-radius: 0px 10px 10px 0px;
+}
+
+.mytab_button:hover {
+    background-color: var(--color-s-prim);
+}
+
+.mytab_active_button {
+    background-color: var(--color-s-prim);
+}
+
+/*Используется для фона в dropdown списках*/
+.mud-paper {
+    /*background-color: pink;*/
+    padding-top: 10px; /*   */
+    overflow: hidden; /* */
+    padding-right: 10px;
+}
+
+
+/*Еще один класс, убирающий отступы. Первый yesno_f01*/
+.m0p0 {
+    margin: 0 !important;
+    padding: 0 !important;
+}
+/*  Убирает отступы у инпутов, если есть свойство Outlined  */
+.mud-input-outlined {
+    margin: 0;
+    padding: 0;
+    height: 32px;
+}
+/* Стилизация кнопок для загрузки файлов в шаблонах */
+.btn_field_download {
+    margin: 0;
+    padding: 0;
+    padding: 4px;
+    background-color: var(--color-secondary);
+    color: #fff;
+    width: 100%;
+    height: 42px;
+    border: none;
+    border-radius: 10px;
+    box-shadow: none;
+    font-family: 'Inter', sans-serif;
+    font-style: normal;
+    font-weight: 500;
+    font-size: var(--button-dnwl-size);
+    text-align: center;
+}
+
+    .btn_field_download:hover {
+        background-color: #009aff;
+        color: #fff;
+        border: none;
+        box-shadow: none;
+    }
+/*Если текст не влазит заменить многоточием*/
+.input_t01text {
+    white-space: nowrap; /*    */
+    overflow: hidden; /*   */
+    text-overflow: ellipsis; /*  */
+    display: flex; /**/
+}
+/*Просто отступ слева. Например, когда загружаешь фотку на страницу мастера*/
+.inp_fp {
+    padding-left: 20px !important;
+}
+/*Задает отступы и белый фон для многих страниц с формочками */
+.my_form {
+    background-color: #fff !important;
+    /*padding: 40px; я не помню зачем такие большие*/
+    padding-top: 10px;
+    padding-left: 40px;
+    padding-right: 40px;
+    padding-bottom: 40px;
+}
+
+
+/*Просто задает белый фон у хедера на страницах*/
+.my_form_header {
+    background-color: #fff !important;
+}
+/*Крестик ждя закрытия*/
+.x_icon {
+    width: 30px;
+    height: 30px;
+    background-image: url("../img/x.svg");
+    background-repeat: no-repeat;
+    float: right;
+    cursor: pointer;
+}
+/*Крестик ждя закрытия, маленький*/
+.x_icon_mini {
+    width: 20px;
+    height: 20px;
+    background-image: url("../img/x.svg");
+    background-repeat: no-repeat;
+    float: right;
+    cursor: pointer;
+}
+
+/*dictionaries fix form*/
+.fix_width01 {
+    min-width: 450px !important;
+}
+/**/
+.fix_width02 {
+    min-width: 600px !important;
+}
+/* skills    drag&drop*/
+.fix_width01_p {
+    padding-right: 5px !important;
+    display: flex; /*   )*/
+}
+/* template  drag&drop*/
+.fix_width02_p {
+    display: flex;
+    padding-right: 25px !important;
+}
+
+/*Починка кнопок в списках значений и регионах*/
+.fix_width01_btn {
+    white-space: nowrap !important;
+}
+
+/* Прочитано исполнителем*/
+.read_by_executor {
+    width: 100%;
+    color: #787878;
+    font-weight: bold;
+    text-align: right;
+}
+/*Надпись, если не прочитано исполнителем*/
+.not_read_by_executor {
+    width: 100%;
+    color: #ff8c9d;
+    font-weight: bold;
+    text-align: right;
+}
+
+
+
+/*Подчеркивание нижнее и равнение вправо аля синяя ссылка*/
+.get_client_info {
+    color: #1d89cf;
+    text-align: right;
+    text-decoration: underline;
+    cursor: pointer;
+}
+/*Смещение вправо ширина по контенту*/
+.info_fc_right {
+    width: fit-content;
+    float: right;
+}
+/*Оформление выбора ввода вручную или автоматически*/
+.region_filter_info {
+    color: #1d89cf;
+    text-align: right;
+    /*cursor: pointer;*/
+}
+/*Просто убирает отступы*/
+.yesno_f01 {
+    padding: 0 !important;
+    margin: 0 !important;
+}
+/*Стилизация формочки для мастера, работающего по контракту*/
+.employee_contract {
+    margin: 0;
+    padding: 0;
+    padding-top: -3px;
+    padding-bottom: 10px;
+    padding-left: 10px;
+    padding-right: 10px;
+    /*background-color: #F1F5FE;*/
+    box-shadow: rgba(0, 0, 0, 0.16) 0px 0px 2px;
+    border-radius: 8px;
+    margin-bottom: 10px;
+}
+
+
+
+/*Задает контейнер для статусов заказа*/
+.mytable_status {
+    margin: 0;
+    padding: 0;
+    margin: 0 auto;
+    padding-top: 2px;
+    padding-bottom: 2px;
+    padding-left: 10px;
+    padding-right: 10px;
+    width: fit-content;
+    border-radius: 8px;
+    margin-bottom: 5px;
+    /*border: 1px red solid;*/
+}
+/*-------Цвета статусов заказа-------------*/
+.STATUS_NEW {
+}
+
+.STATUS_ACCEPTED {
+    background-color: rgba(0,255,0,0.1);
+}
+
+.STATUS_INROAD {
+    background-color: rgba(0,255,0,0.1);
+}
+
+.STATUS_ACTIVE {
+    background-color: rgba(0,255,0,0.1);
+}
+
+.STATUS_REJECTED {
+    background-color: rgba(255,255,0,0.1);
+}
+
+.STATUS_SUSPENDED {
+    background-color: rgba(255,255,0,0.1);
+}
+
+.STATUS_CHANGED {
+    background-color: rgba(255,255,0,0.1);
+}
+
+.STATUS_CANCELED {
+    background-color: rgba(255,0,0,0.1);
+}
+
+.STATUS_COMPLETED {
+    background-color: rgba(0,255,0,0.3);
+}
+
+.STATUS_DELETED {
+    background-color: red;
+    color: #fff;
+}
+/*--------------------*/
+
+/*Задает цвет текста ошибки под инпутами*/
+.my_validation_error_text {
+    color: red;
+}
+
+/*Контейнер для выбранных скиллов*/
+.myflexwrap {
+    display: flex;
+    flex-wrap: wrap;
+}
+/*Стилизация выбранного навыка*/
+.skill {
+    background-color: #edeff0;
+    margin: 10px;
+    padding: 7px 11px;
+    color: #303233;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    border-radius: 8px;
+}
+/*Кнопка сокрытия более 5 навыков*/
+.skill_hide_show {
+    background-color: #a5d2e9;
+    margin: 10px;
+    padding: 7px 11px;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    border-radius: 8px;
+}
+/*Стилизует историю изменений, хедер*/
+.history_header {
+    margin: 0 auto;
+    padding: 8px 16px 8px 16px;
+    background-color: #F0F2F5;
+    border-radius: 8px;
+    font-weight: bold;
+    z-index: 2;
+    cursor: pointer;
+}
+/*Стилизует историю изменений, добавляет само поле изменений*/
+
+.history {
+    margin: 0 auto;
+    padding: 0;
+    margin-top: -8px;
+    padding-top: 10px;
+    padding-left: 8px;
+    padding-bottom: 4px;
+    border: 3px #F0F2F5 solid;
+    border-radius: 8px;
+    z-index: 1;
+    max-height: 200px;
+}
+
+/*История изменений свернута*/
+.history_arrow_top {
+    margin: 0;
+    padding: 0;
+    position: relative;
+    top: 6px;
+    width: 25px;
+    height: 25px;
+    background-image: url("../img/history_arrow.svg");
+    background-repeat: no-repeat;
+    float: right;
+    /*border: 1px red solid;*/
+
+    cursor: pointer;
+}
+/*История изменений развернута*/
+.history_arrow_bottom {
+    margin: 0;
+    padding: 0;
+    position: relative;
+    top: -3px;
+    width: 25px;
+    height: 25px;
+    background-image: url("../img/history_arrow.svg");
+    background-repeat: no-repeat;
+    float: right;
+    /*border: 1px red solid;*/
+
+    cursor: pointer;
+    transform: scale(1, -1);
+}
+
+
+
+/*----------Починка работы сворачивания всего меню при нажатии на toggler------------------*/
+@media (min-width: 641px) {
+    .navbar-toggler {
+        display: none;
+    }
+
+    .collapse {
+        /* Never collapse the sidebar for wide screens */
+        display: block !important;
+    }
+}
+/*----------------------------*/
+
+/*Отступ для всего блока с иконкой*/
+.nav-item {
+/*    margin-bottom: 10px;*/
+}
+
+
+
+
+/*Задает размеры иконки в меню*/
+.menu_icon {
+    width: 30px;
+    height: 30px;
+    background-repeat: no-repeat;
+}
+/*Перекрашивает текст активного пункта меню*/
+.nav-link.active .menu-icon-text {
+    color: var(--color-small-feat);
+}
+
+/*------Делает изначальные иконки серыми, если navlink тригерится, то перекрашивает в синий цвет иконку */
+.menu_icon_addOrder {
+    margin: 0 auto;
+    background: url("../img/addOrder.svg") no-repeat center;
+}
+
+.nav-link.active .menu_icon_addOrder {
+    margin: 0 auto;
+    background: url("../img/addOrder_active.svg") no-repeat center;
+}
+
+.menu_icon_orders {
+    margin: 0 auto;
+    background: url("../img/orders.svg") no-repeat center;
+}
+
+.nav-link.active .menu_icon_orders {
+    margin: 0 auto;
+    background: url("../img/orders_active.svg") no-repeat center;
+}
+
+.menu_icon_customers {
+    margin: 0 auto;
+    background: url("../img/customers.svg") no-repeat center;
+}
+
+.nav-link.active .menu_icon_customers {
+    margin: 0 auto;
+    background: url("../img/customers_active.svg") no-repeat center;
+}
+
+.menu_icon_workers {
+    margin: 0 auto;
+    background: url("../img/workers.svg") no-repeat center;
+}
+
+.nav-link.active .menu_icon_workers {
+    margin: 0 auto;
+    background: url("../img/workers_active.svg") no-repeat center;
+}
+
+.menu_icon_competence {
+    margin: 0 auto;
+    background: url("../img/competence.svg") no-repeat center;
+}
+
+.nav-link.active .menu_icon_competence {
+    margin: 0 auto;
+    background: url("../img/competence_active.svg") no-repeat center;
+}
+
+.menu_icon_templates {
+    margin: 0 auto;
+    background: url("../img/templates.svg") no-repeat center;
+}
+
+.nav-link.active .menu_icon_templates {
+    margin: 0 auto;
+    background: url("../img/templates_active.svg") no-repeat center;
+}
+
+.menu_icon_ordersTypes {
+    margin: 0 auto;
+    background: url("../img/ordersTypes.svg") no-repeat center;
+}
+
+.nav-link.active .menu_icon_ordersTypes {
+    margin: 0 auto;
+    background: url("../img/ordersTypes_active.svg") no-repeat center;
+}
+
+.menu_icon_reasonsCancel {
+    margin: 0 auto;
+    background: url("../img/reasonsCancel.svg") no-repeat center;
+}
+
+.nav-link.active .menu_icon_reasonsCancel {
+    margin: 0 auto;
+    background: url("../img/reasonsCancel_active.svg") no-repeat center;
+}
+
+.menu_icon_listVal {
+    margin: 0 auto;
+    background: url("../img/listVal.svg") no-repeat center;
+}
+
+.nav-link.active .menu_icon_listVal {
+    margin: 0 auto;
+    background: url("../img/listVal_active.svg") no-repeat center;
+}
+
+.menu_icon_regions {
+    margin: 0 auto;
+    background: url("../img/regions.svg") no-repeat center;
+}
+
+.nav-link.active .menu_icon_regions {
+    margin: 0 auto;
+    background: url("../img/regions_active.svg") no-repeat center;
+}
+/*-------------------------------------*/
+
+
+/*Текст пункта меню */
+.menu-icon-text {
+    font-style: normal;
+    font-weight: 500;
+    font-size: 12px;
+    line-height: 15px;
+    text-align: center;
+    /* Gray Dark */
+    color: var(--menu-text-font-color);
+    /* Inside auto layout */
+    padding-top: 5px;
+}
+/*    */
+.menu_group_1 {
+    margin-top: 5px;
+    /*    border: 1px green solid;*/
+}
+
+/*   */
+.menu_group_2 {
+    margin-top: 35px;
+    /*    border: 1px yellow solid;*/
+}
+
+/*    */
+.menu_group_3 {
+    margin-top: 35px;
+    /*    border: 1px blue solid;*/
+}
+
+/*--------------------------------------------*/
+/*Выравнивание кружка аккаунта в меню*/
+.account_div {
+/*    margin: 0 auto;*/
+    padding: 0;
+/*    margin-top: 20px;*/
+    /*margin-bottom: 10px;*/
+}
+/*Кружок аккаунт в меню*/
+.account_circle {
+    padding: 0;
+    margin: 0 auto;
+    background: #56B0F2;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+/*Название аккаунта посреди кружочка в меню*/
+.account_text {
+    padding: 0;
+    margin: 0 auto;
+    color: #fff;
+}
+/*--------------------------------------------*/
+/*----------------------------------------------------------------------------------------------------*/
+/*Картинка продукта на странице логина*/
+.company_brand {
+    margin: 0 auto;
+    background: url("../img/fsm_brand.svg") no-repeat center;
+    width: 278px;
+    height: 155px;
+    margin-bottom: 80px
+}
+
+@font-face {
+    font-family: "Inter";
+    src: local("Inter"), url("../css/fonts/Inter-Medium.ttf") format("opentype"), url("../css/fonts/Inter-Medium.ttf")
+}
+
+
+/*Надпись на странице логина*/
+.login_enter {
+    width: 98px;
+    height: 48px;
+    font-weight: 500;
+    font-size: 40px;
+    line-height: 48px;
+    color: var(--color-ordinary);
+    margin: 0 auto;
+    margin-bottom: 30px;
+}
+/*Надпись логин*/
+.login_input_log {
+    width: 60px;
+    height: 24px;
+    font-weight: 500;
+    font-size: var( --button-sc-text-font-size);
+    line-height: 24px;
+    color: #000000;
+}
+/*Надпись пароль*/
+.login_input_password {
+    width: 74px;
+    height: 24px;
+    font-style: normal;
+    font-weight: 500;
+    font-size: 20px;
+    line-height: 24px;
+    color: var(--color-ordinary);
+    flex: none;
+    order: 0;
+    flex-grow: 0;
+}
+
+/*Стиль инпутов на странице логина */
+.form_input_plnd_log_password {
+    box-sizing: border-box;
+    width: 100%;
+    height: 40px;
+    margin-bottom: 2px;
+    padding-left: 12px;
+    padding-right: 12px;
+    padding-top: 3px;
+    padding-bottom: 1px;
+    font-size: var( --in-font-size);
+    background: #FFFFFF;
+    text-align: left;
+    border: 1px solid #959595;
+    border-radius: 10px;
+    margin-bottom: 10px;
+    outline: none;
+}
+/*Стиль  кнопки войти на странице логина*/
+.login_button {
+    padding: 10px 100px;
+    gap: 10px;
+    min-width: 300px;
+    height: 60px;
+    background: #56B0F2 !important;
+    border-radius: 10px;
+}
+/*Стиль текста кнопки войти на странице логина*/
+.login_button_text {
+    width: 73px;
+    height: 29px;
+    font-family: 'Inter',sans-serif;
+    font-weight: 700;
+    font-size: 24px;
+    line-height: 29px;
+    color: #FFFFFF;
+}
+/*Стиль для строки сброса пароля на странице регистрации*/
+.get_client_info_login {
+    color: #1d89cf;
+    font-family: 'Inter',sans-serif;
+    text-align: left;
+    text-decoration: underline;
+    cursor: pointer;
+    width: fit-content;
+    float: right;
+}
+/*Отступ для области драг-дроп*/
+.types_of_body {
+    /*width: 100%;*/
+    margin-left: 16px;
+}
+/*Кнопка удаления значения в драг-н-дроп */
+.button_Value_delete {
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    width: 40px;
+    height: 40px;
+    background: var(--button-value-del-bg);
+    border-radius: 5px;
+    order: 2;
+    text-align: center;
+    background-image: url("../img/Delete.svg");
+    background-repeat: no-repeat;
+    background-position: center;
+}
+/* !!!  shadow    --*/
+.mud-elevation-1 {
+    box-shadow: none;
+}
+/*Стилизация всех input в страницах с drug-n-drop*/
+.form_input_Value {
+    padding: 7px 10px;
+    /*    width: 370px;*/
+    height: 40px;
+    border: 1px solid #959595;
+    border-radius: 10px;
+    font-size: var( --in-font-size);
+    font-weight: 400;
+    font-family: 'Inter',sans-serif;
+}
+
+/*Чтобы объединить div с иконкой*/
+.type_btn_group {
+    width: fit-content;
+    cursor: pointer;
+    margin-top: 20px;
+}
+/*Добавить значение, иконка плюса*/
+.button_add_value {
+    background: url(../img/addType.svg) center no-repeat;
+    background-position: center;
+    height: 25px;
+    width: 25px;
+    margin-right: 13px;
+}
+/*Кнопка добавить контакт в заказе*/
+.text_button_add_value {
+    width: auto;
+    font-size: var(--button-add-dnd-font-size);
+    color: var(--color-small-feat);
+}
+@media (max-width:320px){
+    .text_button_add_value{
+        width: min-content;
+    }
+}
+/*Кнопка Далее/Сохранить везде*/
+.button_saveChange {
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    padding: 10px 20px;
+    max-width: 147px;
+    max-height: 50px;
+    background: var(--color-secondary) !important;
+    border-radius: 10px;
+    box-shadow: none !important;
+}
+/*Кнопка удалить везде*/
+.button_deleteChange {
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    padding: 10px 20px;
+    max-width: 147px;
+    max-height: 50px;
+    background: var(--color-dis) !important;
+    border-radius: 10px;
+    box-shadow: none !important;
+}
+
+/*Стиль текста кнопки сохранить*/
+.button_saveChange_text {
+    max-width: 107px;
+    max-height: 24px;
+    font-family: 'Inter',sans-serif;
+    font-style: normal;
+    font-weight: 500;
+    font-size: var(--button-sc-text-font-size);
+    line-height: 24px;
+    padding: 0px !important;
+    /* White */
+    color: var(--button-font-color);
+}
+
+/*Стиль кнопки отмена*/
+.button_discardChange {
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    padding: 10px 20px;
+    max-width: 147px;
+    height: 50px;
+    /* White */
+    border: none;
+    background: var(--button-discard-bg);
+    border-radius: 10px;
+    /* Inside auto layout */
+    box-shadow: none !important;
+}
+
+/*Стиль кнопки отмены текст*/
+.button_discardChange_text {
+    /*  width: 77px;*/
+    height: 24px;
+    font-family: 'Inter', sans-serif;
+    font-style: normal;
+    font-weight: 500;
+    font-size: var(--button-sc-text-font-size);
+    line-height: 24px;
+    /* Blue Dark */
+    color: var(--color-small-feat);
+    padding: 0px !important;
+}
+
+/*Промежуток между строками в области с драг-н-дроп*/
+.row_space_between {
+    margin-bottom: 11px;
+}
+
+/*----Левая менюшка----*/
+.e-sidebar {
+    background-color: var(--color-prim);
+    min-width: 90px;
+    height: 100%;
+    overflow: scroll;
+}
+
+.sidebar_fixed {
+    position: fixed;
+    overflow: auto;
+    height: 100%;
+    left: 0;
+    background-color: var(--color-prim);
+}
+/*----------------*/
+/*---------Делает так, чтобы левая менюшка превращалась в бургер при маленьком разрешении------ */
+@media (max-width:641px) {
+    .sidebar_fixed {
+        position: relative !important;
+        width: 100%;
+        overflow: hidden !important;
+        background-color: var(--color-prim);
+    }
+
+    .e-sidebar {
+        background-color: var(--color-prim);
+        min-width: 90px;
+        height: 100%;
+        overflow: hidden;
+    }
+}
+/*-----------------*/
+
+
+
+/*Настраивает позицию и полосы прокрутки у таблицы Заказов*/
+.mytable_block {
+    margin: 0;
+    padding: 0;
+    /*background-color: pink;*/
+    width: calc(100vw - 110px);
+    height: calc(100vh - 100px);
+    overflow-x: scroll;
+    overflow-y: scroll;
+    position: absolute;
+    right: 0;
+/*    border: 1px solid #D9D9D9;*/
+}
+
+
+    /*Делает заголовки таблицы закрепленными*/
+    .mytable_block thead th {
+        position: sticky;
+        top: 0;
+        z-index: 1;
+        border: 1px solid #D9D9D9;
+        padding-top: 10px; /* add some padding at the top */
+        height: 40px; /* set a fixed height for the header row */
+    }
+
+/*Отключает отступы у таблицы Заказов*/
+.mytable {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+}
+
+
+
+/*Заголовоки таблицы*/
+.myth {
+    /*Пример не менять*/
+    /*white-space: nowrap;
+    overflow-wrap: break-word;*/
+    background-color: var(--color-prim);
+    /*background-color: #FFF;*/
+    /*border: 1px blue solid;*/
+    padding-left: 0px;
+    padding-right: 0px;
+    position: relative;
+}
+/*Класс полей фильтров в таблице заказов*/
+.mytable_block .order_filter {
+    width: 100%;
+    position: absolute;
+    bottom: -32px;
+    border-radius: 0px;
+    /*border: 1px solid #d5d5d5;*/
+    /*border-top: 1px solid #d5d5d5;*/
+    border-bottom: 1px solid #d5d5d5;
+    display: block;
+    height: 32px;
+    padding-top: 10px;
+    padding-left: 5px;
+    padding-right: 5px;
+    padding-bottom: 40px;
+    background-color: #FFF;
+}
+
+/*Текст внутри фильтра*/
+.order_filter2 {
+    width: 100%;
+    height: 30px;
+    background-color: none;
+    border-radius: 4px;
+    border: 1px solid #d5d5d5;
+    /*padding-left: 5px;*/
+    text-align: center;
+}
+
+/*Текст хедера в заказах*/
+.header_text {
+    text-align: center;
+    padding-left: 5px;
+    padding-right: 5px;
+    margin-bottom: 30px;
+}
+
+.mytr {
+    border: 1px solid #D9D9D9;
+    cursor: pointer;
+}
+
+    .mytr:hover {
+        /*background-color: rgb(0,0,0,0.7);
+        color: #fff;*/
+        text-decoration-color: black;
+        text-shadow: 0 0 .3px #333, 0 0 .3px #333, 0 0 .3px #333;
+    }
+/*ячейки таблицы*/
+.mytd {
+    width: 1%;
+    white-space: nowrap;
+    overflow: hidden; /* Обрезаем все, что не помещается в область */
+    text-overflow: ellipsis;
+    text-align: center;
+    max-width: 515px;
+    border: 1px solid #D9D9D9;
+    padding-top: 5px;
+    padding-left: 5px;
+    padding-right: 5px;
+}
+    /*Убирает стиль у данных в таблице заказов*/
+    .mytd a {
+        margin: 0;
+        padding: 0;
+        text-decoration: none;
+        color: unset;
+    }
+
+
+/*Класс который скрывает не текущие табы на странице создания заказа*/
+.my_hidden {
+    width: 0;
+    height: 0;
+    visibility: hidden;
+    /*!!!*/
+    position:fixed;
+    transform: scale(0);
+}
+
+/*Вася*/
+.vasya {
+    background-color: pink;
+    cursor: pointer;
+    border: 0.5px red solid;
+    padding: 5px;
+    width: 100%;
+}
+/*На странице клиентов и тд выравнивает Выгрузить в Excel*/
+.export_excel_row {
+    margin: 0;
+    padding: 0;
+/*    margin-bottom: -15px;*/
+}
+
+/*Просто fit-content*/
+.my_fc {
+    width: fit-content;
+}
+/*При сохранении данных о клиенте или мастере - перекидывает вверх*/
+.anchor_link {
+    margin: 0;
+    padding: 0;
+    width: 0;
+    height: 0;
+}
+
+
+/*Починка добавления региона/списка*/
+.region_dValue_fix {
+    margin: 0;
+    padding: 0;
+    position: sticky;
+    top: 20px;
+    width: 100%;
+}
+/*Стиль кнопки добавления клиента, мастера*/
+.button_add_to_data {
+    padding: 10px 20px;
+    min-width: 186px;
+    height: 44px;
+    /* Blue Primary */
+    background: var(--color-secondary);
+    border-radius: 10px;
+}
+/*Стиль текста кнопки добавления клиента, мастера*/
+.button_add_to_data_text {
+    font-family: 'Inter', sans-serif;
+    font-weight: 700;
+    font-size: var(--button-sc-text-font-size);
+    color: var(--button-font-color);
+}
+/*Стиль заголовка страницы  */
+.page_header {
+    margin-bottom: 20px;
+    width: 100%
+}
+
+/*Стиль хедера в радзеновской таблице*/
+.header_table {
+    height: 64px;
+    width: 100%;
+    background-color: var(--color-prim) !important;
+}
+    /*Стиль текста хедера в радзеновской таблице*/
+    .header_table .rz-column-title-content {
+        font-size: 20px !important;
+        color: var(--color-ordinary);
+    }
+
+/*-----Скругляет углы у таблиц в первом и последнем столбце*/
+div.rz-data-grid-data > table > thead > tr:nth-child(1) > th:nth-child(1) {
+    border-top-left-radius: 10px;
+}
+
+div.rz-data-grid-data > table > thead > tr:nth-child(1) > th:nth-last-child(1) {
+    border-top-right-radius: 10px;
+}
+/*----------*/
+
+
+/*Убирает белый фон у полей фильтра в таблицах*/
+th div.rz-cell-filter {
+    background-color: inherit !important;
+}
+/*Стиль текста данных в таблице*/
+.table_font {
+    font-size: var(--tb-font);
+    line-height: 19px;
+    color: var(--color-ordinary);
+}
+
+/*Убирается встроенный toggle в кнопке экспорта при маленьком разрешении*/
+@media (max-width: 768px) {
+    .rz-menu:not(.rz-profile-menu) .rz-menu-toggle-item {
+        display: none !important;
+    }
+
+    .rz-menu.rz-menu-closed:not(.rz-profile-menu) .rz-navigation-item {
+        display: flex !important;
+    }
+}
+/*Положение вправо для кнопки экспорта*/
+.dropdown_export_button {
+    width: fit-content !important;
+    /*float: right;*/
+    /*    display:flex;*/
+}
+
+@media(max-width: 576px) {
+    .dropdown_export_button {
+        float: none;
+    }
+}
+/*Стилизация на элемент выпадающего меню экспорта */
+.button_export_page_xls {
+    padding: 10px 20px;
+    width: 100%;
+    height: 44px;
+    background: #F0F2F5;
+    font-style: normal;
+    font-weight: 500;
+    font-size: var(--button-dnwl-size);
+    line-height: 24px;
+    color: #000000;
+}
+    /*Ховер на кнопку экспорта*/
+    .button_export_page_xls:hover {
+        background-color: #A1D2F4;
+    }
+
+/*Убрать задний фон кнопока радзенменю_кнопки*/
+div.dropdown_export_button > ul.rz-menu {
+    background-color: unset;
+}
+
+/*hover выпадающего радзенменю_кнопки*/
+.rz-menu > li.rz-navigation-item > div:hover {
+    transition: 0.1s linear;
+    background-color: #d8d9dc !important;
+    /*opacity: 0.5;*/
+}
+/*стилизация кнопки экспорта. Изменение цвета иконки*/
+.rz-menu > li.rz-navigation-item > div > div > i.rzi.rz-navigation-item-icon {
+    color: var(--btn-export-color) !important;
+}
+/*стилизация кнопки экспорта. Главная кнопка границы и бэкграунд*/
+.rz-menu > li.rz-navigation-item > div {
+    background-color: var(--btn-export-bg);
+    color: var(--color-ordinary);
+    border-radius: 10px !important;
+}
+    /*стилизация в кнопки экспорта. Главная кнопка*/
+    .rz-menu > li.rz-navigation-item > div > div {
+        font-style: normal;
+        font-weight: 500;
+        line-height: 24px;
+        color: var(--color-ordinary) !important;
+        font-size: var(--button-sc-text-font-size);
+    }
+/*стилизация в кнопки экспорта выпадающего меню. Убирает паддинг списка*/
+.rz-menu > li.rz-navigation-item.rz-navigation-item-active > ul {
+    padding: 0;
+}
+
+/*Название списка/Название региона стилизация*/
+.dvalue_name {
+    font-family: 'Inter',sans-serif;
+    font-style: normal;
+    font-weight: 400;
+    font-size: 24px;
+    line-height: 29px;
+    color: var(--color-ordinary);
+}
+
+
+/*Надпись в добавляемом значении в регионаъ/списк знач*/
+.region_newValue_label {
+    /*    font-family: 'Inter',sans-serif;*/
+    font-style: normal;
+    font-weight: 400;
+    font-size: var(--label-sm-font-size);
+    line-height: 29px;
+    color: var(--color-ordinary);
+}
+/*Стилизация инпута в регионах/списк знач*/
+.dValue_add_main_input {
+    padding: 7px 10px;
+    gap: 10px;
+    width: 100%;
+    height: 40px;
+    /* Gray Dark */
+    border: 1px solid #959595;
+    border-radius: 10px;
+    /*    margin-bottom: 10px;*/
+    font-size: var( --in-font-size);
+    font-weight: 400;
+}
+/*Контейнер для добавления значения в таблицу регионов или списков знач*/
+.dValue_add_body {
+    color: var(--color-ordinary);
+    border-bottom: 1px solid #e5e5e5;
+    padding-left: 40px;
+    /*    padding-top: 25px;*/
+    /*width: 430px;*/
+}
+
+/*Таблица создания новых заказов*/
+.table_createorder_width {
+    width: 100px;
+}
+/*Хедер в обычной таблице,не библиотечной*/
+.table_d_head {
+    background-color: var(--color-prim);
+    font-size: 20px;
+    color: var(--color-ordinary);
+    width: 100%;
+    vertical-align: middle;
+    text-align: left;
+}
+
+.hover_on_row {
+    cursor: pointer;
+}
+
+    .hover_on_row:hover {
+        background-color: var(--color-prim);
+    }
+/*Текст в таблице*/
+.createorder_table_data_text {
+    font-size: 15px;
+    ;
+    color: var(--color-ordinary);
+    word-break: break-word;
+}
+/*Создать новое значение в рег и списк знач*/
+.create_new_btn {
+    padding: 10px 20px;
+    /*min-width: 186px;*/
+    height: 100%;
+    /* Blue Primary */
+    background: var(--color-secondary);
+    border-radius: 10px;
+    box-shadow: none;
+}
+
+/*Создать новое значение в рег и списк знач. Стилизация текста*/
+.create_new_btn_text {
+    font-family: 'Inter', sans-serif;
+    font-style: normal;
+    font-weight: 700;
+    font-size: 16px;
+    line-height: 24px;
+    color: #FFFFFF;
+}
+/*Кнопка изменить в регионах и списках знач*/
+
+.button_change_data {
+    /* Auto layout */
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    padding: 10px 20px;
+    gap: 10px;
+    max-width: 147px;
+    max-height: 50px;
+    /* Gray Primary */
+    background: var(--color-secondary);
+    border-radius: 10px;
+}
+
+    /*Ховер на кнопку изменить в регионах и списках знач*/
+    .button_change_data:hover {
+        background: #145f90;
+    }
+
+/*Стилизация текста кнопок в регионах и списках значений*/
+.button_change_n_del_data_text {
+    max-width: 107px;
+    max-height: 24px;
+    font-family: 'Inter',sans-serif;
+    font-style: normal;
+    font-weight: 500;
+    font-size: 16px;
+    line-height: 24px;
+    color: #FFFF;
+    /* Inside auto layout */
+    flex: none;
+    flex-grow: 0;
+    padding: 0px !important;
+}
+/*Стилизация кнопки удалить или изменить*/
+.button_del_data {
+    /* Auto layout */
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    padding: 10px 20px;
+    gap: 10px;
+    max-width: 147px;
+    max-height: 50px;
+    /* Gray Primary */
+    background: var(--color-dis);
+    border-radius: 10px;
+}
+/*hover на кнопку удаления значения из таблицы:Списки знач, регионы*/
+.button_change_n_del_data:hover {
+    background: #aa2e25;
+}
+
+/*Убираем паддинги у окна при создании/изменении региона, списка знач */
+@media (max-width: 992px) {
+    .dValue_add_body {
+        padding-left: 0px;
+        padding-right: 0px;
+    }
+}
+
+/*Кнопки создать список и регион для маленьких экранов*/
+/*@media (max-width:455px) {
+    .create_new_btn {
+        min-width: 100%;
+    }
+
+    .create_new_btn_text {
+        font-size: 14px;*/
+/*16*/
+/*}
+}*/
+
+
+/*Убирает паддинги для всех страниц с драг-н-дропом*/
+.types_of_body > div > div > div.mud-list.mud-list-padding {
+    padding-top: 0px;
+}
+
+/*Убирает паддинги для всех страниц с драг-н-дропом*/
+.types_of_body > div > div.mud-paper {
+    padding-top: 0px;
+    padding-right: 0px;
+}
+
+
+/*-------Внутренние границы таблицы в списках значений,шаблонах и регионах--------*/
+.table_borders {
+    border-collapse: separate !important;
+    border-spacing: 0 !important;
+}
+
+    .table_borders tr th,
+    .table_borders tr td {
+        border-right: 1px solid #dee2e6 !important;
+        border-bottom: 1px solid #dee2e6 !important;
+    }
+
+        .table_borders tr th:first-child,
+        .table_borders tr td:first-child {
+            border-left: 1px solid #dee2e6 !important;
+        }
+
+    .table_borders tr th {
+        border-top: 1px solid #dee2e6 !important;
+    }
+    /*-------Скругленные внешние границы таблицы в списках значений,шаблонах и регионах--------*/
+    /* top-left border-radius */
+    .table_borders tr:first-child th:first-child {
+        border-top-left-radius: 10px;
+    }
+
+    /* top-right border-radius */
+    .table_borders tr:first-child th:last-child {
+        border-top-right-radius: 10px;
+    }
+
+    /* bottom-left border-radius */
+    .table_borders tr:last-child td:first-child {
+        border-bottom-left-radius: 10px;
+    }
+
+    /* bottom-right border-radius */
+    .table_borders tr:last-child td:last-child {
+        border-bottom-right-radius: 10px;
+    }
+/*---------------*/
+
+
+/*Grid_Format------*/
+/*Делает прозрачным половину MudDrawer, но экран остается не кликабельным */
+.format_window {
+    background-color: rgba(0,0,0,0);
+}
+/*Бэк граунд для окна формата*/
+.format_window_s1 {
+    background-color: #fff;
+    padding: 10px;
+    border: 2px solid #c1c1c1;
+    width: 100%;
+    position: absolute;
+    bottom: 0;
+    margin-bottom: 20px;
+    margin-right: 10px;
+    max-height: 600px;
+}
+/* Строки создавших формат*/
+.format_list_text {
+    width: 580px;
+    white-space: nowrap;
+    overflow: hidden; /* Обрезаем все, что не помещается в область */
+    text-overflow: ellipsis;
+}
+/*Крестик в окне формата*/
+.format_window_cross {
+    width: 100%;
+    text-align: right;
+}
+
+.format_tab_menu {
+}
+/*Список форматов - создатель формата*/
+.format_fixed {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    max-height: 500px;
+    overflow-x: hidden;
+    overflow-y: auto;
+}
+
+/*Табуляция в окне форматов*/
+.mytab_format_button {
+    display: inline-block;
+    font-family: 'Inter';
+    font-style: normal;
+    font-weight: 500;
+    font-size: 18px;
+    color: var(--color-ordinary);
+    cursor: pointer;
+    border-radius: 0;
+    padding: 5px;
+    height: fit-content;
+}
+/*Группа кнопок Создать и Сохранить*/
+.format_window_buttons {
+    float: right;
+    display: flex;
+    flex-direction: column;
+}
+/*Создать новый формат*/
+.format_new_btn {
+    border: 0.5px solid #c1c1c1;
+    padding: 5px;
+    width: 150px;
+    margin-bottom: 10px;
+    border-radius: 4px;
+    background-color: #fff;
+    color: #424242;
+}
+/*Сохранить формат*/
+.format_save_btn {
+    /*border: 0.5px solid #c1c1c1;*/
+    padding: 5px;
+    width: 150px;
+    margin-bottom: 10px;
+    border-radius: 4px;
+    background-color: #1d89cf;
+    color: #fff;
+}
+/*End_Grid--------*/
+/*Всплывающая подсказка*/
+.mytooltip_div {
+    margin: 0;
+    padding: 0;
+    text-align: left;
+}
+
+/*22.03.22------------*/
+
+/*Выравнивание кнопок "Отмена" и "Сохранить" вправо */
+.save_cancel_group_btn {
+    text-align: right;
+}
+
+/* 23.03.22------------------*/
+/*Для Радзеновских таблиц*/
+.gridTable {
+    height: calc(100vh - 200px);
+    width: calc(100%);
+    border-radius: 10px !important;
+    border: 1px solid #D9D9D9 !important;
+}
+
+@media(max-width: 641px) {
+    .gridTable {
+        height: calc(100vh - 200px);
+        width: calc(90vw);
+    }
+}
+
+/*Стилизация label*/
+.input_label {
+    font-weight: 500;
+    font-size: var(--label-font-size);
+    line-height: 24px;
+    color: var(--color-ordinary);
+}
+/*размер шрифта label В адресах и тд*/
+.small_input_label {
+    font-size: 14px;
+    color: var(--color-ordinary);
+}
+/*28.03.23-------------*/
+/*Просто отступ снизу*/
+.block_form {
+    margin-bottom: 10px;
+}
+
+/*Кнопка формат в Заказах*/
+.orders_format {
+    margin: 0;
+    margin-bottom: 10px;
+    padding: 0;
+    padding: 7px;
+    width: fit-content;
+    cursor: pointer;
+    border: 1px black solid;
+    border-radius: 4px;
+}
+
+/*Меняет размер иконки добавления нового поля в шаблонах*/
+.mud-button-icon-size-large > *:first-child {
+    font-size: 28px;
+}
+
+
+/*Перекрашивает иконку настроек, если она активна*/
+.menu_icon_settings {
+    margin: 0 auto;
+    background: url("../img/settings_menu.svg") no-repeat center;
+}
+
+ .menu_icon_settings_active {
+    margin: 0 auto;
+    background: url("../img/settings_active.svg") no-repeat center;
+}
+
+/*6.04.23----------*/
+
+
+/*Стилизует в заказе TextArea Описание*/
+.textarea_input {
+    /* Auto layout */
+    padding: 16px 10px;
+    gap: 10px;
+    width: 100%;
+    height: 80px;
+    /* Gray Dark */
+    border: 1px solid #959595;
+    border-radius: 10px;
+    font-family: 'Inter',sans-serif;
+    font-style: normal;
+    font-weight: 400;
+    font-size: 16px !important;
+    line-height: 24px;
+    color: var(--color-ordinary);
+}
+
+
+/*Длительность в ОПИСАНИИ*/
+div.mud-input.mud-input-outlined {
+    box-sizing: border-box;
+    padding: 8px 10px;
+    width: 100%;
+    min-height: 42px !important;
+    color: var(--color-ordinary);
+}
+/*Длительность рамка в ОПИСАНИИ*/
+div.mud-input-outlined-border {
+    border: 1px solid #959595 !important;
+    border-radius: 10px !important;
+    display: block;
+}
+
+
+/*10.04.23*/
+/*Для скругления DataPicker в новом заказе*/
+.rz-calendar .rz-inputtext {
+    border: 1px solid #959595 !important;
+    border-radius: 10px !important;
+}
+
+
+h1:focus {
+    outline: none;
+}
+
+/*Стилизует шрифт в таблицах*/
+.table_data_text {
+    font-size: 15px;
+    line-height: 19px;
+    color: var(--color-ordinary);
+    hyphens: auto;
+    word-break: break-all;
+
+}
+/*
+tr:checked ~ tr.hover_on_row_dr{
+    background-color:blue;
+    color:red;
+}*/
+
+
+.table_borderless {
+    width: 100%;
+}
+
+/*Класс ячейки в таблицах регионов списков значений*/
+.td_rdl{
+    cursor: pointer;
+}
+.td_rdl.active {
+    background-color: var(--hover-color);
+}
+    .td_rdl:hover {
+        background-color: var(--hover-color);
+    }
+/*Кнопка удаления значения в таблице без фона*/
+.button_table_del {
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    min-width: 30px;
+    min-height: 30px;
+    border-radius: 5px;
+    order: 2;
+    text-align: center;
+    background-image: url("../img/Delete.svg");
+    background-repeat: no-repeat;
+    background-position: center;
+}
+/*Просто отступ для таблицы*/
+.pdng {
+    padding: var(--table-data-pad);
+}
+
+/*-------Границы таблицы в списках значений,регионах без хедера--------*/
+.table_borders_dish {
+    border-collapse: separate !important;
+    border-spacing: 0 !important;
+}
+
+.table_borders_dish tr td {
+    border-right: 1px solid #dee2e6 !important;
+    border-bottom: 1px solid #dee2e6 !important;
+}
+
+.table_borders_dish tr td:first-child {
+    border-left: 1px solid #dee2e6 !important;
+}
+
+.table_borders_dish tr td {
+    border-top: 1px solid #dee2e6 !important;
+}
+/* top-left border-radius */
+.table_borders_dish tr:first-child td:first-child {
+    border-top-left-radius: 10px;
+}
+
+/* top-right border-radius */
+.table_borders_dish tr:first-child td:last-child {
+    border-top-right-radius: 10px;
+}
+
+/* bottom-left border-radius */
+.table_borders_dish tr:last-child td:first-child {
+    border-bottom-left-radius: 10px;
+}
+
+/* bottom-right border-radius */
+.table_borders_dish tr:last-child td:last-child {
+    border-bottom-right-radius: 10px;
+}
+/*---------------*/
+/*Сокрытие в регионах и списк знач правого окна*/
+
+
+/*Новое меню*/
+/*main {
+    margin-top: 6em;
+}*/
+
+@media (max-width:575px) {
+    nav {
+        position: relative !important;
+    }
+    .navbar_re{
+        height:min-content!important;
+    }
+
+}
+
+.navbar_re {
+    background-color: var(--color-prim) !important;
+    height:90px;
+}
+
+.menu_icon_settings {
+    margin: 0 auto;
+    background: url("../img/settings_menu.svg") no-repeat center;
+}
+
+.nav-link.active .menu_icon_settings {
+    margin: 0 auto;
+    background: url("../img/settings_active.svg") no-repeat center;
+}
+
+
+.toggle_dr ::after{
+    background-color: unset;
+    border-right: 2px solid #959595;
+    border-bottom: 2px solid #959595;
+    width: 10px;
+    display: inline-block;
+    height: 10px;
+    transform: rotate(45deg);
+    margin-top: 0px;
+    content: "";
+    transition: all 0.3s ease-out;
+}
+.menu_icon_notif {
+    margin: 0 auto;
+    background: url("../img/notification.svg") no-repeat center;
+    width:50px;
+    height:50px;
+}
+.lines {
+    border-left: 1px solid #959595 ;
+    border-right: 1px solid #959595 ;
+    height: 20%;
+    width:100%
+}
+.navbar {
+    padding-top: 0rem;
+    padding-bottom: 0rem;
+}
+
+/*.container-fluid {
+    padding-right: 0px !important;
+    padding-left: 0px!important;
+}*/
+/*-----------------*/
+/*Делается для того, чтобы табуляция умещалась на странице*/
+@media (max-width:690px) {
+    .mytabmenu{
+        display:flex;
+        flex-wrap:wrap;
+    }
+
+}
+
+@media(max-width: 762px){
+    .btn_field_download {
+        font-size: 12px;
+    }
+}

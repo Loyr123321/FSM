@@ -1,0 +1,403 @@
+﻿<MudSelect T="Dictionary" Margin=MudBlazor.Margin.Dense Variant="Variant.Outlined" MultiSelection="false">
+@foreach (var d in dictionaries)
+{
+    <MudSelectItem T="Dictionary" Value="@d.Id">@d.Id</MudSelectItem>
+}
+</MudSelect>
+
+
+
+
+
+
+
+
+
+
+
+
+<input class="form_input_plnd z_101" @onchange="@(x => { context._value = x.Value; })" style="width:100%;" placeholder="Ссылка" />
+
+
+
+private void DeleteFiles1()
+{
+    //!! удалять файлы отдельно если на них никто не ссылается
+
+    //List<TemplateFieldView> deletedFields;
+    //List<TemplateFieldView> deletedExecutorFields;
+    //if(!string.IsNullOrWhiteSpace(selector))
+    //{
+    //    deletedFields = fields.Where(x => x.TemplateField.Selector == selector).ToList();
+    //    deletedExecutorFields = executorFields.Where(x => x.TemplateField.Selector == selector).ToList();
+    //}
+    //else
+    //{
+    //    deletedFields = fields.ToList();
+    //    deletedExecutorFields = executorFields.ToList();
+    //}
+        
+    //deletedFields.AddRange(deletedExecutorFields);
+    //foreach (var deletedField in deletedFields)
+    //{
+    //    if (deletedField.TemplateField.Type == FieldType.FTFile)
+    //    {
+    //        FileInfo file = new FileInfo(AppDomain.CurrentDomain.BaseDirectory + @"/files/" + deletedField.AsString);
+    //        file.Delete();
+    //    }
+    //}
+}
+
+
+
+
+
+
+
+
+
+
+ @*<MudSelect T="DictionaryValue" Margin=MudBlazor.Margin.Dense Variant="Variant.Outlined" MultiSelection="true" SelectAll="true" SelectAllText="Выбрать все"
+                                            @bind-Value="@field.AsDictionary.selectedValues"
+                                            @bind-SelectedValues="@field.AsDictionary.selectedValues"
+                                            MultiSelectionTextFunc="@(new Func<List<string>, string>(GetMultiSelectionText))">
+                                            @foreach (var dvalue in field.AsDictionary.Values)
+                                            {
+                                            <MudSelectItem T="DictionaryValue" Value="@dvalue">@dvalue.Value</MudSelectItem>
+                                            }
+                                        </MudSelect>*@
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+@page "/test1"
+@using BlazorApp1.Components
+
+<MudSelect T="string" Label="Coffee" AnchorOrigin="Origin.BottomCenter">
+    <MudSelectItem Value="@("Cappuccino")" />
+    <MudSelectItem Value="@("Cafe Latte")" />
+    <MudSelectItem Value="@("Espresso")" />
+</MudSelect>
+<MudSelect T="double" Label="Price" Variant="Variant.Outlined" AnchorOrigin="Origin.BottomCenter">
+    <MudSelectItem T="double" Value="4.50" />
+    <MudSelectItem T="double" Value="4.99" />
+    <MudSelectItem T="double" Value="3.60" />
+</MudSelect>
+<MudSelect T="Pizza" Label="Pizza" Variant="Variant.Filled" AnchorOrigin="Origin.BottomCenter">
+    <MudSelectItem Value="@(new Pizza("Cardinale"))" />
+    <MudSelectItem Value="@(new Pizza("Diavolo"))" />
+    <MudSelectItem Value="@(new Pizza("Margarita"))" />
+    <MudSelectItem Value="@(new Pizza("Spinaci"))" />
+</MudSelect>
+
+
+<Modal @ref="modal">
+    <Title>This is a <em>Title!</em></Title>
+    <Body>
+        <p>
+            Lorem ipsum dolor sit amet, consectetur adipiscing elit. Omnes enim iucundum motum, quo sensus hilaretur.
+            <i>Quis istud possit, inquit, negare?</i>
+            <mark>Ego vero isti, inquam, permitto.</mark> Duo Reges: constructio interrete.
+        </p>
+        <FetchData />
+        <dl>
+            <dt><dfn>Stoici scilicet.</dfn></dt>
+            <dd>An hoc usque quaque, aliter in vita?</dd>
+            <dt><dfn>Erat enim Polemonis.</dfn></dt>
+            <dd>Quod cum accidisset ut alter alterum necopinato videremus, surrexit statim.</dd>
+        </dl>
+    </Body>
+    <Footer>
+        <button type="button" class="btn btn-primary">Save changes</button>
+        <button type="button" class="btn btn-secondary" data-dismiss="modal" @onclick="() => modal.Close()">Close</button>
+    </Footer>
+</Modal>
+
+
+<button class="btn btn-primary" @onclick="() => modal.Open()">Modal!</button>
+
+
+@code {
+
+    private Modal modal { get; set; }
+
+
+    public class Pizza
+    {
+        public Pizza(string name)
+        {
+            Name = name;
+        }
+
+        public readonly string Name;
+
+        // Note: this is important so the MudSelect can compare pizzas
+        public override bool Equals(object o)
+        {
+            var other = o as Pizza;
+            return other?.Name == Name;
+        }
+
+        // Note: this is important too!
+        public override int GetHashCode() => Name?.GetHashCode() ?? 0;
+
+        // Implement this for the Pizza to display correctly in MudSelect
+        public override string ToString() => Name;
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+//Пример
+var response = await Http.PostAsync("/api/File", content);
+var newUploadResults = await response.Content.ReadFromJsonAsync<List<UploadResult>>();
+
+if(newUploadResults is not null)
+{
+    uploadResults = uploadResults.Concat(newUploadResults).ToList();
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+//
+foreach (var field in fileFields)
+{
+    foreach(var file in field.AsFiles)
+    {
+        if (file.browserFile != null)
+        {
+            string path = string.Concat(Utils.UploadPath.UploadDir, file.fileName);
+            await using FileStream fs = new(path, FileMode.Create);
+
+            await file.browserFile.OpenReadStream(Utils.UploadPath.MAX_FILE_SIZE).CopyToAsync(fs);
+
+            //var tt = file.browserFile.OpenReadStream(Utils.UploadPath.MAX_FILE_SIZE);
+            //await tt.CopyToAsync(fs);
+
+            //Console.Beep(250, 500);
+        }
+    }
+}
+
+
+
+
+
+
+
+
+List<string> fileNames = new();
+        using var content = new MultipartFormDataContent();
+
+        foreach (var field in fileFields)
+        {
+            foreach(var file in field.AsFiles)
+            {
+                if (file.browserFile != null)
+                {
+                    var browserFile = file.browserFile;
+                    var tt =browserFile.OpenReadStream(Utils.UploadPath.MAX_FILE_SIZE);
+                    var fileContent = new StreamContent(tt);
+                    fileContent.Headers.ContentType = new MediaTypeHeaderValue(browserFile.ContentType);
+                    fileNames.Add(browserFile.Name);
+                    content.Add(content: fileContent, name: "\"files\"", fileName: browserFile.Name);
+                }
+            }
+        }
+
+        var response = await Http.PostAsync("/api/Upload/UploadFiles", content);
+        return response.StatusCode;
+//
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+###ClientPage
+
+<div class="row">
+    <div class="col-md-8">
+        <table class="table table-striped table-bordered">
+            <thead>
+                <tr>
+                    <th>Id</th>
+                    <th>###</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (clients.Count() > 0)
+                {
+                    @foreach (var cli in clients)
+                    {
+                        <tr>
+                            <td>@cli.Id</td>
+                            <td>
+                                <button class="btn btn-primary" @onclick="@(e=>Edit(cli.Id))">Edit</button>
+                                <button class="btn btn-primary" @onclick="@(e=>Delete(cli.Id))">Delete</button>
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+
+$$$ Шаблон
+<div class="row">
+    <div class="col-md-8">
+        <table class="table table-striped table-bordered">
+            <thead>
+                <tr>
+                    <th>Id</th>
+                    <th>###</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (templates.Count() > 0)
+                {
+                    @foreach (var template in templates)
+                    {
+                        <tr>
+                            <td>@template.Id</td>
+                            <td>
+                                <button class="btn btn-primary" @onclick="@(e=>Edit(template.Id))">Edit</button>
+                                <button class="btn btn-primary" @onclick="@(e=>Delete(template.Id))">Delete</button>
+                            </td>
+                        </tr>
+                    }
+
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+
+
+
+
+
+
+
+
+//Бригады
+<div class="row">
+    <div class="col-md-8">
+        <table class="table table-striped table-bordered">
+            <thead>
+                <tr>
+                    <th>Id</th>
+                    <th>###</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (brigades.Count() > 0)
+                {
+                    @foreach (var brgd in brigades)
+                    {
+                        <tr>
+                            <td>@brgd.Id</td>
+                            <td>
+                                <button class="btn btn-primary" @onclick="@(e=>Edit(brgd.Id))">Edit</button>
+                                <button class="btn btn-primary" @onclick="@(e=>Delete(brgd.Id))">Delete</button>
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+@if(context.TemplateField.Type == FieldType.FTFile || context.TemplateField.Type == FieldType.FTPhoto)
+{
+    <div class="row">
+        <div class="col-12">
+            @if(context.AsFiles.Count > 0)
+            {
+                @foreach(var file in context.AsFiles)
+                {
+                    <div class="row">
+                        @if(@file.browserFile != null)
+                        {
+                            <div class="col-3 input_t01text inp_fp">(@file.browserFile.Size байт)</div>
+                            <div class="col-7 input_t01text">@file.browserFile.Name</div>
+                        }else{
+                            <div class="col-3 input_t01text inp_fp"></div>
+                            <div class="col-7 input_t01text">@file.TFile.Name</div>
+                        }
+                        <div class="col-2 input_t01text"><div class="x_icon_mini" @onclick="(e=> DeleteFile(context, file.TFile.Name, _fieldsDropContainer, fields))"></div></div>
+                    </div>
+                }
+            }
+        </div>
+    </div>
+}
