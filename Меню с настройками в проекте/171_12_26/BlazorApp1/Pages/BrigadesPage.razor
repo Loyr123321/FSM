@@ -1,0 +1,289 @@
+﻿@*@page "/brigades"
+
+@using BlazorApp1.Models
+@inject ILoggerFactory LoggerFactory
+
+@inject IService.ISkillService skillService
+@inject IService.IEmployeeService employeeService
+@inject IService.IBrigadeService brigadeService
+
+<div class="row">
+    <div class="col-4">
+
+        <div class="row">
+            <div class="col-md-12">
+                <label>Название:</label>
+                <input class="form_input_plnd" @bind="brigade.BrigadeName" style="width:100%;" placeholder="" />
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-12">
+                <label>Описание:</label>
+                <input class="form_input_plnd" @bind="brigade.BrigadeDescription" style="width:100%;" placeholder="" />
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-12">
+                <label>Бригадир*:</label>
+                <MudGrid>
+                    <MudItem xs="12">
+                        <MudAutocomplete Variant="Variant.Outlined" Margin=MudBlazor.Margin.Dense T="Employee" @bind-Value="brigadier" SearchFunc="@SearchBrigadier" ToStringFunc="@(e=> e==null?null : $"{e.LastName} {e.FirstName} {e.MiddleName}")" Clearable="true" />
+                    </MudItem>
+                </MudGrid>
+            </div>
+        </div>
+
+        <div class="row" style="margin-top:20px;">
+            <div class="col-md-12">
+                <label>Состав*:</label>
+                <MudSelect T="Employee" MultiSelection="true"
+                           
+                           @bind-SelectedValues="selectedMembers"
+                           MultiSelectionTextFunc="@(new Func<List<string>, string>(GetMultiSelectionMemberText))"
+                >
+                    @if(employees != null)
+                    {
+                        @foreach (var employee in employees)
+                        {
+                            <MudSelectItem T="Employee" Value="@employee">@employee.LastName @employee.FirstName @employee.MiddleName</MudSelectItem>
+                        }
+                    }
+                </MudSelect>
+            </div>
+        </div>
+
+        <div class="row" style="margin-top:20px;">
+            <div class="col-md-12">
+                <label>Навыки бригады*:</label>
+                <MudSelect T="Skill" MultiSelection="true" SelectAll="true" SelectAllText="Выбрать все"
+                   @bind-Value="@selectedSkill"
+                   @bind-SelectedValues="selectedSkills"
+                   MultiSelectionTextFunc="@(new Func<List<string>, string>(GetMultiSelectionSkillText))">
+                    @foreach (var skill in allSkills)
+                    {
+                        <MudSelectItem T="Skill" Value="@skill">@skill.SkillName</MudSelectItem>
+                    }
+                </MudSelect>
+
+                @if (selectedMembers.Count() > 0)
+                {
+                    <button class="btn plnd_button" style="margin-top:10px;" @onclick="@(e=>GetSkillsFromEmployees())">Взять навыки у состава</button>
+                }
+                
+            </div>
+        </div>
+
+        <div class="row" style="margin-top:20px;">
+            <div class="col-md-12">
+                <button class="btn btn-primary" @onclick="@(e=>Save())">Сохранить</button>
+                <button class="btn btn-primary" @onclick="@(e=>Reset())" style="float:right;">Очистить</button>
+            </div>
+        </div>
+
+    </div>
+    <div class="col-8">
+
+        <div class="row">
+            <div class="col-md-12">
+                <label>Название:</label>
+                <input class="form_input_plnd" @bind="brigade.BrigadeName" style="width:100%;" placeholder="" />
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-12">
+                <label>Описание:</label>
+                <input class="form_input_plnd" @bind="brigade.BrigadeDescription" style="width:100%;" placeholder="" />
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-12">
+                <label>Бригадир*:</label>
+                <MudGrid>
+                    <MudItem xs="12">
+                        <MudAutocomplete Variant="Variant.Outlined" Margin=MudBlazor.Margin.Dense T="Employee" @bind-Value="brigadier" SearchFunc="@SearchBrigadier" ToStringFunc="@(e=> e==null?null : $"{e.LastName} {e.FirstName} {e.MiddleName}")" Clearable="true" />
+                    </MudItem>
+                </MudGrid>
+            </div>
+        </div>
+
+        <div class="row" style="margin-top:20px;">
+            <div class="col-md-12">
+                <label>Состав*:</label>
+                <MudSelect T="Employee" MultiSelection="true"
+                           @bind-SelectedValues="selectedMembers"
+                           MultiSelectionTextFunc="@(new Func<List<string>, string>(GetMultiSelectionMemberText))">
+                    @if (employees != null)
+                    {
+                        @foreach (var employee in employees)
+                        {
+                            <MudSelectItem T="Employee" Value="@employee">@employee.LastName @employee.FirstName @employee.MiddleName</MudSelectItem>
+                        }
+                    }
+                </MudSelect>
+            </div>
+        </div>
+
+        <div class="row" style="margin-top:20px;">
+            <div class="col-md-12">
+                <label>Навыки бригады*:</label>
+                <MudSelect T="Skill" MultiSelection="true" SelectAll="true" SelectAllText="Выбрать все"
+                           @bind-Value="@selectedSkill"
+                           @bind-SelectedValues="selectedSkills"
+                           MultiSelectionTextFunc="@(new Func<List<string>, string>(GetMultiSelectionSkillText))">
+                    @foreach (var skill in allSkills)
+                    {
+                        <MudSelectItem T="Skill" Value="@skill">@skill.SkillName</MudSelectItem>
+                    }
+                </MudSelect>
+
+                @if (selectedMembers.Count() > 0)
+                {
+                    <button class="btn plnd_button" style="margin-top:10px;" @onclick="@(e=>GetSkillsFromEmployees())">Взять навыки у состава</button>
+                }
+
+            </div>
+        </div>
+
+        <div class="row" style="margin-top:20px;">
+            <div class="col-md-12">
+                <button class="btn btn-primary" @onclick="@(e=>Save())">Сохранить</button>
+                <button class="btn btn-primary" @onclick="@(e=>Reset())" style="float:right;">Очистить</button>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+@code
+{
+    public void Debug()
+    {
+        //var logger = LoggerFactory.CreateLogger<string>();
+        //logger.LogWarning("orderTypes.Count()==" + orderTypes.Count());
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        GetEmployees();
+        GetSkills();
+        GetBrigades();
+    }
+
+    private Employee brigadier;//Бригадир
+    private async Task<IEnumerable<Employee>> SearchBrigadier(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            //return null;
+            return employeeService.GetEmployees().Take(20);
+        }
+
+        var match = employeeService.GetEmployees().FindAll(x =>
+            ( x.FirstName.ToLower().Contains(value.ToLower()) || x.LastName.ToLower().Contains(value.ToLower()) || x.MiddleName.ToLower().Contains(value.ToLower()) )
+        );
+
+        return match;
+    }
+
+    private Brigade brigade = new Brigade();
+    private List<Brigade> brigades = new();
+    public void GetBrigades()
+    {
+        brigades = brigadeService.GetBrigades();
+    }
+
+
+    //private List<Employee> members = new List<Employee>();
+    private Employee selectedMember = new Employee(); //!!Зачем?
+    private IEnumerable<Employee> selectedMembers { get; set; } = new HashSet<Employee>();
+    private string GetMultiSelectionMemberText(List<string> selectedValues)
+    {
+        return $"Выбрано людей: {selectedValues.Count}";
+    }
+    private List<Employee> employees; //все
+    private void GetEmployees()
+    {
+        employees = employeeService.GetEmployees();
+    }
+
+
+    private Skill selectedSkill = new Skill(); //!!Зачем?
+    private IEnumerable<Skill> selectedSkills { get; set; } = new HashSet<Skill>();
+    private string GetMultiSelectionSkillText(List<string> selectedValues)
+    {
+        return $"Выбрано навыков: {selectedValues.Count}";
+    }
+    private List<Skill> allSkills;//все
+    private void GetSkills()
+    {
+        allSkills = skillService.GetSkills();
+    }
+    private void GetSkillsFromEmployees()
+    {
+        HashSet<Skill> membersSkills = new HashSet<Skill>();
+        foreach (var member in selectedMembers)
+        {
+            foreach (string skillId in member.Skills)
+            {
+                var skill = allSkills.Find(x => x.Id == skillId);
+                membersSkills.Add(skill);
+            }
+        }
+
+        selectedSkills = membersSkills;
+    }
+
+
+    private void Save()
+    {
+        brigade.Brigadier = brigadier.Id;
+
+        List<string> memberIds = selectedMembers.Select(x => x.Id).ToList();
+        brigade.Members = memberIds;
+
+        List<string> skillIds = selectedSkills.Select(x => x.Id).ToList();
+        brigade.Skills = skillIds;
+
+        brigadeService.SaveOrUpdate(brigade);
+        Reset();
+        GetBrigades();
+    }
+    private void Reset()
+    {
+        brigade = new Brigade();
+        brigadier = null;
+        selectedSkills = new HashSet<Skill>();
+        selectedMembers = new HashSet<Employee>();
+    }
+    private void Edit(string id)
+    {
+        brigade = brigadeService.GetBrigade(id);
+        brigadier = employeeService.GetEmployee(brigade.Brigadier);
+
+        List<Employee> members = new List<Employee>();
+        foreach (string memberId in brigade.Members)
+        {
+            var member = employees.Find(x => x.Id == memberId);
+            members.Add(member);
+        }
+        selectedMembers = members;
+
+        List<Skill> skills = new List<Skill>();
+        foreach (string skillId in brigade.Skills)
+        {
+            var skill = allSkills.Find(x => x.Id == skillId);
+            skills.Add(skill);
+        }
+        selectedSkills = skills;
+    }
+    private void Delete(string id)
+    {
+        brigadeService.Delete(id);
+        Reset();
+        GetBrigades();
+    }
+}*@

@@ -1,0 +1,166 @@
+﻿@page "/account"
+@attribute [Authorize(Policy = "RequireRole")]
+
+@using BlazorApp1.Models;
+@using BlazorApp1.Services;
+@using System.Security.Claims;
+@inject UserService userService
+@inject ISnackbar Snackbar
+@inject NavigationManager navigationManager
+
+<div class="row d-flex justify-content-center">
+    <div class="col-6">
+        <div class="row">
+            <div class="col-6">
+                <div>
+                    <h3>@authenticationStateTask.Result.User.Identity.Name</h3>
+                    <h3>@authenticationStateTask.Result.User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Email)?.Value</h3>
+                </div>
+
+                @if (isShowEditForm == false)
+                {
+                    <div>
+                        Назначенные роли:
+                        @foreach (var role in authenticationStateTask.Result.User.Claims.Where(t => t.Type == System.Security.Claims.ClaimTypes.Role))
+                        {
+                            @role.Value <text>&nbsp;</text>
+                        }
+                    </div>
+                }
+                else if (!string.IsNullOrEmpty(currentUser.Email))
+                {
+                    <div class="col-md-12">
+                        <label>Пароль:</label>
+                        <input type="password" class="@validationClassPassword" @bind="currentUser.Password" style="width:100%;" />
+                    </div>
+                    <div class="col-md-12">
+                        <label>Подтверждение пароля:</label>
+                        <input type="password" class="@validationClassPassword" @bind="currentUser.ConfirmPassword" style="width:100%;" />
+                        @if (!string.IsNullOrEmpty(validationPasswordText))
+                        {
+                            <div class="my_validation_error_text">@validationPasswordText</div>
+                        }
+                    </div>
+
+                    <div style="float: right; text-align: right;">
+                        <MudButton Disabled="@_processing" Variant="MudBlazor.Variant.Filled" Color="Color.Default" OnClick="@(e=>HideEditForm())">
+                            <MudText>Отменить</MudText>
+                        </MudButton>
+                        <MudButton Disabled="@_processing" Variant="MudBlazor.Variant.Filled" Color="Color.Primary" OnClick="@(e=>SavePassword())">
+                            <MudText>Сохранить</MudText>
+                        </MudButton>
+                    </div>
+                }
+
+            </div>
+            <div class="col-6">
+                <div class="get_client_info" @onclick="(e=> LogOut() )">Выход</div>
+                <div class="get_client_info" @onclick="(e=> ShowEditForm() )">Изменить пароль</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+@code
+{
+    [CascadingParameter]
+    private Task<AuthenticationState> authenticationStateTask { get; set; }
+    private bool isShowEditForm = false;
+    public void ShowEditForm()
+    {
+        isShowEditForm = true;
+        currentUser.Password = string.Empty;
+        currentUser.ConfirmPassword = string.Empty;
+        validationPasswordText = string.Empty;
+        validationClassPassword = "form_input_plnd";
+    }
+    public void HideEditForm() { isShowEditForm = false; }
+
+    private User currentUser = new();
+    //
+    private string validationPasswordText = string.Empty;
+    private string validationClassPassword = "form_input_plnd";
+    //
+    private bool _processing = false;
+
+    private List<string> ValidationPass()
+    {
+        List<string> result = new();
+
+        validationPasswordText = string.Empty;
+        validationClassPassword = "form_input_plnd";
+
+        if (string.IsNullOrEmpty(currentUser.Password) || string.IsNullOrEmpty(currentUser.ConfirmPassword))
+        {
+            validationClassPassword = "invalid form_input_plnd";
+            result.Add("Null Pass");
+            validationPasswordText = "Поля должны быть заполнены";
+        }
+        else
+        {
+            if (!currentUser.Password.Equals(currentUser.ConfirmPassword))
+            {
+                validationClassPassword = "invalid form_input_plnd";
+                result.Add("Passwords do not match");
+                validationPasswordText = "Пароли не совпадают";
+            }
+        }
+
+        if (currentUser.Password.Any(x => Char.IsWhiteSpace(x)))
+        {
+            validationClassPassword = "invalid form_input_plnd";
+            result.Add("Forbidden symbols");
+            validationPasswordText = "Пароль содержит запрещённые символы";
+        }
+
+        return result;
+    }
+    public void SavePassword()
+    {
+        try
+        {
+            var validation = ValidationPass();
+            if (validation.Count > 0)
+                return;
+
+            currentUser.Password = Utils.SecretHasher.Hash(currentUser.Password);
+            userService.SaveOrUpdate(currentUser);
+
+            ShowNotification(Severity.Success, "Пароль сохранен");
+            currentUser.Password = string.Empty;
+            currentUser.ConfirmPassword = string.Empty;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("AccountPage_SavePassword_exception " + ex.Message);
+            return;
+        }
+        finally
+        {
+            _processing = false;
+            StateHasChanged();
+        }
+    }
+    public void LogOut()
+    {
+        navigationManager.NavigateTo("/logout", true, true);
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var email = authenticationStateTask.Result.User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Email)?.Value;
+        if(string.IsNullOrEmpty(email))
+        {
+            currentUser = userService.GetUserByEmail(email);
+            currentUser.Password = string.Empty;
+            currentUser.ConfirmPassword = string.Empty;
+        }
+    }
+
+    private void ShowNotification(Severity severity, string text)
+    {
+        Snackbar.Clear();
+        Snackbar.Add(text, severity);
+    }
+}

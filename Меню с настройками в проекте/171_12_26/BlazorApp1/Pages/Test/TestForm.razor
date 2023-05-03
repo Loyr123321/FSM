@@ -1,0 +1,47 @@
+﻿@page "/test_form"
+
+<EditForm Model="@client">
+    <DataAnnotationsValidator />
+    @*<ValidationSummary />*@
+    <div class="row">
+        <div class="col-md-12">
+            <label>Фамилия*:</label>
+            <input class="form_input_plnd" @bind="client.MiddleName" style="width:100%;" />
+
+            <InputText @bind-Value=client.FirstName class="form-control"/>
+            <InputText @bind-Value=client.LastName class="form-control" />
+
+            <InputText @bind-Value=client.ClientPhone class="form-control" />
+            <ValidationMessage For="() => client.ClientPhone" />
+
+            <div class="row">
+                <div class="col-md-12">
+                    <label>Телефон*:</label>
+                    <RadzenMask Mask="+* (***) ***-****"
+                                CharacterPattern="[0-9]"
+                                Placeholder="+7 (000) 000-0000"
+                                @bind-Value=@client.ClientPhone
+                                Style="width: 100%;"
+                                class="form_input_plnd" />
+                </div>
+            </div>
+
+            <label>ValidationCodes*:</label>
+            <ValidationMessage For="() => client.FirstName" />
+            <ValidationMessage For="() => client.LastName" />
+            <ValidationMessage For="() => client.MiddleName" />
+        </div>
+    </div>
+
+    <input type="submit" class="btn btn-primary" value="Save" />
+</EditForm>
+
+@code {
+    //Модель заглушка для EditForm
+    //private class BuffModel { }
+    //private BuffModel nullBuffModel = new BuffModel();
+
+    private Models.Client client=new();
+
+    
+}

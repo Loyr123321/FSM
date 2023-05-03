@@ -1,0 +1,591 @@
+﻿@page "/client"
+@attribute [Authorize(Policy = "RequireRole")]
+@using BlazorApp1.Components
+@using BlazorApp1.Models
+@using BlazorApp1.Models.Validation;
+@using BlazorApp1.Services
+@using Blazored.FluentValidation
+@using Blazored.Modal
+@using Blazored.Modal.Services
+@using FluentValidation.Results;
+
+@inject Services.ClientService clientService
+@inject Services.DaDataService dadataService
+@inject NavigationManager navigationManager
+@inject ISnackbar Snackbar
+@inject ILoggerFactory LoggerFactory
+@inject IDialogService DialogService
+
+
+@if (client != null)
+{
+
+
+    @if (client != null)
+    {
+        <div class="row">
+            <div class="col-10 d-none d-sm-block col-xxl-6">
+                <div class="row block_form">
+                    <div class="col-6">
+                        <h5 class="page_header_text">
+                            @if (string.IsNullOrWhiteSpace(id))
+                            {
+                                <span>Новый клиент</span>
+                            }
+                            else
+                            {
+                                <span>Клиент</span>
+                            }
+                        </h5>
+                    </div>
+                    @if (currentUrl == "client")
+                    {
+                        <div class="col-6" @onclick="@(e=>CloseWindow())">
+                            <div class="x_icon"></div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+        <div class="w-100" />
+        <div class="col-10 d-none d-sm-block col-xxl-6 my_form">
+
+            <div class="block_form">
+                @foreach (var type in ClientType.clientTypes)
+                {
+                    string clienttype_style = "";
+                    if (client.ClientType != null)
+                    {
+                        if (type.TypeId == client.ClientType.TypeId)
+                        {
+                            clienttype_style = "btn_pressed";
+                        }
+                    }
+                    <button class="btn_client_type_re @clienttype_style" @onclick="() => SetClientType(type)"> <span class="btn_client_type_re_text">@type.TypeName</span></button>
+                }
+            </div>
+
+            <EditForm Model="@client" OnValidSubmit="@Save">
+                @if (client.ClientType.Equals(ClientType.Physical))
+                {
+
+
+                    <div class="row block_form">
+                        <div class="col-md-12">
+                            <label class="input_label_creating">Фамилия*:</label>
+                            <InputText @bind-Value=client.LastName class="data_input_creating" style="width:100%;" />
+                            <ValidationMessage For="() => client.LastName" />
+                        </div>
+                    </div>
+
+                    <div class="row block_form">
+                        <div class="col-md-12">
+                            <label class="input_label_creating">Имя*:</label>
+                            <InputText @bind-Value=client.FirstName class="data_input_creating" style="width:100%;" />
+                            <ValidationMessage For="() => client.FirstName" />
+                        </div>
+                    </div>
+
+                    <div class="row block_form">
+                        <div class="col-md-12">
+                            <label class="input_label_creating">Отчество:</label>
+                            <InputText @bind-Value=client.MiddleName class="data_input_creating" style="width:100%;" />
+                            <ValidationMessage For="() => client.MiddleName" />
+                        </div>
+                    </div>
+
+
+                    <div class="row block_form">
+                        <div class="col-md-12">
+                            <label class="input_label_creating">Телефон*:</label>
+                            <RadzenMask Mask="+* (***) ***-****"
+                            CharacterPattern="[0-9]"
+                            Placeholder="+7 (000) 000-0000"
+                            @bind-Value=@client.ClientPhone
+                            Style="width: 100%;"
+                            class="data_input_creating" />
+
+                            <ValidationMessage For="() => client.ClientPhone" />
+                        </div>
+                    </div>
+
+                    <div class="row block_form">
+                        <div class="col-md-12">
+                            <label class="input_label_creating">Почта:</label>
+                            <input class="data_input_creating" @bind="client.ClientMail" style="width:100%;" />
+                            <ValidationMessage For="() => client.ClientMail" />
+                        </div>
+                    </div>
+
+                }
+
+                @if (client.ClientType.Equals(ClientType.Legal))
+                {
+
+
+                    <div class="row">
+                        <div class="col-md-12">
+                            <label class="input_label_creating">Наименование*:</label>
+                            <InputText @bind-Value=client.OrganizationName class="data_input_creating" style="width:100%;" />
+                            <ValidationMessage For="() => client.OrganizationName" />
+                        </div>
+                    </div>
+
+                }
+
+                <div class="block_form">
+                    <AddressComponent address="@address" />
+                </div>
+
+
+                <div class="contacts block_form" style="margin-top:20px;">
+                    @if (client.Contacts != null && client.Contacts.Count() > 0)
+                    {
+                        @foreach (var contact in client.Contacts)
+                        {
+                            <div class="row align-items-center block_form">
+                                <div class="col-md-3">
+                                    <label class="small_input_label_creating">Имя</label>
+                                    <InputText @bind-Value=contact.ClientContactName class="data_input_creating" style="width:100%;" />
+                                    <ValidationMessage For="() => contact.ClientContactName" />
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="small_input_label_creating">Телефон</label>
+                                    <RadzenMask Mask="+* (***) ***-****"
+                                CharacterPattern="[0-9]"
+                                Placeholder="+7 (000) 000-0000"
+                                @bind-Value=@contact.Phone
+                                Style="width: 100%;"
+                                class="data_input_creating" />
+
+                                    <ValidationMessage For="() => contact.Phone" />
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="small_input_label_creating">Почта</label>
+                                    <InputText @bind-Value=contact.Mail class="data_input_creating" style="width:100%;" />
+                                    <ValidationMessage For="() => contact.Mail" />
+                                </div>
+
+                                @if (client.Contacts.Count() > 0 && contact.IsMain == false)
+                                {
+                                    <div class="col-md-2">
+                                        <br>
+                                        <button class="button_Value_delete" @onclick:preventDefault="true" @onclick="(e => DeleteContact(contact))">
+                                        </button>
+                                    </div>
+                                }
+
+
+                            </div>
+                        }
+                    }
+
+                    <button @onclick:preventDefault="true" @onclick="AddContact">
+                        <div class="button_add_value"></div>
+                        <span class="text_button_add_value">   Добавить контакт </span>
+                    </button>
+
+                </div>
+
+
+                <div class="row block_form">
+                    <div class="col-md-12">
+                        @if (id != null)
+                        {
+                            <MudButton Class="del_current_form" Disabled="@_processing" OnClick="@(e=>OpenDialogDelete(client.Id, client.GetFullName()))">
+                                @if (_processing)
+                                {
+                                    <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                                    <MudText Class="del_current_form_text">Processing</MudText>
+                                }
+                                else
+                                {
+                                    <MudText Class="del_current_form_text">Удалить</MudText>
+                                }
+                            </MudButton>
+                        }
+
+                        <div style="float: right;">
+                            <div class="save_cancel_group_btn">
+                                @if (currentUrl == "client")
+                                {
+                                    <MudButton Disabled="@_processing" Class="button_discardChange" OnClick="@(e=>CloseWindow())">
+                                        <MudText Class="button_discardChange_text">Отменить</MudText>
+                                    </MudButton>
+                                }
+                                <MudButton Disabled="@_processing" Class="button_saveChange" ButtonType="ButtonType.Submit">
+                                    @if (_processing)
+                                    {
+                                        <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                                        <MudText Class="ms-2">Processing</MudText>
+                                    }
+                                    else
+                                    {
+                                        <MudText Class="button_saveChange_text">Сохранить</MudText>
+                                    }
+                                </MudButton>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+
+                <FluentValidationValidator />
+            </EditForm>
+        </div>
+
+
+    }
+}
+else
+{
+    <h5>Клиент не найден. Возможно он был удален.</h5>
+}
+
+
+
+
+@code
+{
+    [CascadingParameter]
+    private Task<AuthenticationState> authenticationStateTask { get; set; }
+
+    private string currentUrl = string.Empty;
+    public void SetCurrentUrl()
+    {
+        currentUrl = navigationManager.Uri;
+        currentUrl = currentUrl.Replace(navigationManager.BaseUri, string.Empty);
+        if (currentUrl.Contains(@"/"))
+        {
+            var items = currentUrl.Split('/');
+            currentUrl = items[0];
+        }
+        else if (currentUrl.Contains(@"?"))
+        {
+            var items = currentUrl.Split('?');
+            currentUrl = items[0];
+        }
+    }
+
+
+    [Parameter]
+    public EventCallback<Client> OnClientResult { get; set; }
+
+    [Parameter]
+    [SupplyParameterFromQuery]
+    public string id { get; set; }
+    public IMask emailMask = RegexMask.Email();
+
+    public PatternMask phoneMask = new PatternMask(@"+# ### ### ## ##")
+        {
+            MaskChars = new[] { new MaskChar('#', @"[0-9]") }
+        };
+
+    public void Debug()
+    {
+
+    }
+
+    //чтобы адрес очищался после создания Помогла вот эта штука TextUpdateSuppression = "false"
+    //@ref="myEL"
+    //MudAutocomplete<DaData.Models.Suggestions.Results.AddressResult> myEL;
+
+    protected override async Task OnInitializedAsync()
+    {
+        SetCurrentUrl();
+
+        if (!string.IsNullOrWhiteSpace(id))
+        {
+            if (id.Length != 24)
+            {
+                client = null;
+                return;
+            }
+            Edit(id); //object is null if id wrong
+        }
+    }
+
+    private bool _processing = false;
+    private void ShowNotification(Severity severity, string text)
+    {
+        Snackbar.Clear();
+        Snackbar.Add(text, severity);
+    }
+
+    private void CloseWindow()
+    {
+        navigationManager.NavigateTo("/clients");
+    }
+
+    private Address address = new Address();
+
+    private async Task<IEnumerable<Client>> SearchClient(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            //return null;
+            return clientService.GetAll().Where(x => x.OrganizationName != null).Take(20);
+        }
+        //ClientService service = new ClientService();
+        var response = clientService.GetAll();
+        var match = response.FindAll(x => x.OrganizationName != null && x.OrganizationName.ToLower().Contains(value.ToLower()));
+
+        return match;
+    }
+
+
+
+    private void SetClientType(ClientType type)
+    {
+        client.ClientType = type;
+
+        if (!client.ClientType.Equals(ClientType.Physical))
+        {
+            if (client.Contacts == null)
+            {
+                client.Contacts = new List<ClientContact>();
+            }
+
+            if (client.Contacts.Count == 0)
+            {
+                client.Contacts.Add(new ClientContact(true));
+            }
+            else
+            {
+                client.Contacts[0].IsMain = true;
+            }
+        }
+        else
+        {
+            if (client.Contacts != null && client.Contacts.Count > 0)
+            {
+                foreach (var contact in client.Contacts)
+                {
+                    contact.IsMain = false;
+                }
+            }
+            else
+            {
+                client.Contacts = null;
+            }
+        }
+    }
+
+    private void AddContact()
+    {
+        if (client.Contacts == null)
+            client.Contacts = new();
+
+        client.Contacts.Add(new ClientContact());
+    }
+    private void DeleteContact(ClientContact contact)
+    {
+        client.Contacts.Remove(contact);
+    }
+
+    private Client client = new Client();
+    private List<Client> clients = new List<Client>();
+    //private void GetClients()
+    //{
+    //    clients = clientService.GetClients();
+    //}
+
+    private string Validation()
+    {
+        switch (client.ClientType.TypeId)
+        {
+            case "Physical":
+                if (string.IsNullOrWhiteSpace(client.LastName))
+                {
+                    ShowNotification(Severity.Warning, "Не задано поле \"Фамилия\" ");
+                    return ValidationCode.EmptyName;
+                }
+                if (string.IsNullOrWhiteSpace(client.FirstName))
+                {
+                    ShowNotification(Severity.Warning, "Не задано поле \"Имя\" ");
+                    return ValidationCode.EmptyName;
+                }
+                if (string.IsNullOrWhiteSpace(client.ClientPhone))
+                {
+                    ShowNotification(Severity.Warning, "Не задано поле \"Телефон\" ");
+                    return ValidationCode.EmptyName;
+                }
+
+                //Проверка телефона
+                if (CheckPhysicalPhoneDuplicates() > 0)
+                {
+                    ShowNotification(Severity.Warning, "Клиент с заданным телефоном уже существует");
+                    return ValidationCode.DuplicateFields;
+                }
+
+                break;
+            case "Legal":
+                if (string.IsNullOrWhiteSpace(client.OrganizationName))
+                {
+                    ShowNotification(Severity.Warning, "Не задано поле \"Имя организации\" ");
+                    return ValidationCode.EmptyName;
+                }
+                //Проверка совпадения по имени
+                if (CheckLegalNameDuplicates() > 0)
+                {
+                    ShowNotification(Severity.Warning, "Клиент с таким наименованием уже существует");
+                    return ValidationCode.DuplicateFields;
+                }
+                break;
+        }
+
+        ////!Адрес мб н б и проверять надо не по городу
+        //if (string.IsNullOrWhiteSpace(client.Address.FullAddress))
+        //{
+        //    ShowNotification(Severity.Warning, "Не задан Адрес ");
+        //    return Utils.ValidationCode.EmptyName;
+        //}
+
+        return ValidationCode.ValidationSuccess;
+    }
+
+    private int CheckPhysicalPhoneDuplicates()
+    {
+        var result = clientService.GetPhysicalClientByPhone(client.ClientPhone);
+
+        //Не проверять самого себя
+        if (result != null && result.Id == client.Id)
+            return 0;
+
+        if (result != null)
+            return 1;
+        else
+            return 0;
+    }
+    private int CheckLegalNameDuplicates()
+    {
+        //Не проверять пустые значения
+        if (string.IsNullOrEmpty(client.OrganizationName))
+        {
+            return 0;
+        }
+
+        var result = clientService.GetLegalClientByName(client.OrganizationName);
+
+        //Не проверять самого себя
+        if (result != null && result.Id == client.Id)
+            return 0;
+
+        if (result != null)
+            return 1;
+        else
+            return 0;
+    }
+
+    private async void Save()
+    {
+        try
+        {
+            _processing = true; await Task.Delay(1);
+
+            client.Trim();
+
+            client.Address = address;
+
+            //Занулить неиспользуемые данные
+            if (client.ClientType.Equals(ClientType.Physical))
+            {
+                client.OrganizationName = null;
+            }
+            else if (client.ClientType.Equals(ClientType.Legal))
+            {
+                client.FirstName = null;
+                client.LastName = null;
+                client.MiddleName = null;
+                client.ClientPhone = null;
+                client.ClientMail = null;
+            }
+
+            var validation = Validation();
+            if (validation != ValidationCode.ValidationSuccess)
+            {
+                return;
+            }
+
+
+            //Создал Изменил Дата создания/изменения
+            if (string.IsNullOrEmpty(client.Creator))
+            {
+                client.Creator = authenticationStateTask.Result.User.Identity.Name;
+            }
+            if (client.CreateTime == null)
+            {
+                client.CreateTime = DateTime.Now;
+            }
+            client.UserLastUpdate = authenticationStateTask.Result.User.Identity.Name;
+            client.LastUpdateTime = DateTime.Now;
+            //
+
+            clientService.SaveOrUpdate(client);
+            await OnClientResult.InvokeAsync(client);
+            ShowNotification(Severity.Success, "Клиент сохранен");
+        }
+        catch (Exception ex)
+        {
+            ShowNotification(Severity.Error, "Ошибка сохранения данных");
+            Console.WriteLine("Save_Exception: " + ex.Message);
+            return;
+        }
+        finally
+        {
+            _processing = false;
+            StateHasChanged();
+        }
+
+    }
+    private void Reset()
+    {
+        var saveId = client.Id;
+        client = new Client();
+        client.Id = saveId;
+        address = new Address();
+        //myEL.ForceRender(true);
+
+        client.Contacts = new List<ClientContact>();
+    }
+    private void Edit(string id)
+    {
+        Reset();
+        client = clientService.GetOne(id);
+        if (client == null) { return; }
+
+        if (client.Address != null)
+        {
+            address = client.Address;
+        }
+    }
+
+
+
+    private async void OpenDialogDelete(string id, string name)
+    {
+        var options = new DialogOptions { CloseOnEscapeKey = true };
+        var dialog = DialogService.Show<Dialog>("Удалить " + name + "?", options);
+
+        var result = await dialog.Result;
+        if (!result.Cancelled)
+        {
+            var delResult = Delete(id);
+            if (delResult == true)
+            {
+                CloseWindow();
+            }
+            else { ShowNotification(Severity.Error, "Ошибка удаления данных"); }
+        }
+
+    }
+    private bool Delete(string id)
+    {
+        var result = clientService.Delete(id);
+        Reset();
+        if (result > 0)
+            return true;
+        else
+            return false;
+    }
+}

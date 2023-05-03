@@ -1,0 +1,77 @@
+﻿@page "/selecttemplate"
+@attribute [Authorize(Policy = "RequireRole")]
+@using BlazorApp1.Models;
+@inject NavigationManager navigationManager
+@inject Services.OrderTemplateService orderTemplateService
+
+
+<link rel="stylesheet" href="_content/Radzen.Blazor/css/material-base.css">
+
+<span><strong>Шаблон</strong></span>
+<RadzenDropDown @bind-Value=@selectedTemplate Data=@templates Change="@SetGridTemplate" Style="min-width: 400px; margin-bottom: 10px;" />
+
+
+@code
+{
+
+    //private string currentUrl = string.Empty;
+    //public void SetCurrentUrl()
+    //{
+    //    currentUrl = navigationManager.Uri;
+    //    currentUrl = currentUrl.Replace(navigationManager.BaseUri, string.Empty);
+    //    if (currentUrl.Contains(@"/"))
+    //    {
+    //        var items = currentUrl.Split('/');
+    //        currentUrl = items[0];
+    //    }
+    //    else if (currentUrl.Contains(@"?"))
+    //    {
+    //        var items = currentUrl.Split('?');
+    //        currentUrl = items[0];
+    //    }
+    //}
+
+    public void SetTemplate()
+    {
+        string templateId = navigationManager.Uri;
+        var items = templateId.Split('=').ToList();
+
+        if (items != null && items.Count > 1 && !string.IsNullOrEmpty(items[1]))
+        {
+            templateId = items[1];
+            selectedTemplate = templates.FirstOrDefault(x => x.Id == templateId);
+        }
+    }
+
+
+    public OrderTemplate selectedTemplate;
+    public List<OrderTemplate> templates = new();
+
+    private async Task<IEnumerable<OrderTemplate>> SearchTemplate(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            //return null;
+            return orderTemplateService.GetAll().Where(x => x.OrderTemplateName != null).Take(20);
+        }
+
+        var response = orderTemplateService.GetAll();
+        var match = response.FindAll(x => x.OrderTemplateName != null && x.OrderTemplateName.ToLower().Contains(value.ToLower()));
+
+        return match;
+    }
+    protected override async Task OnInitializedAsync()
+    {
+        GetTemplates();
+        SetTemplate();
+    }
+    private void GetTemplates()
+    {
+        templates = orderTemplateService.GetAll();
+    }
+
+    public void SetGridTemplate()
+    {
+        navigationManager.NavigateTo("/orders?template=" + selectedTemplate.Id, true, true);
+    }
+}

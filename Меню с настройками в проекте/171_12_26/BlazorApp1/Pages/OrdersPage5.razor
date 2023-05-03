@@ -1,0 +1,804 @@
+﻿@page "/orders"
+@attribute [Authorize(Policy = "RequireRole")]
+@using BlazorApp1.Models
+@using BlazorApp1.Services
+@using BlazorApp1.Views
+@using MudBlazor.Utilities
+@using Radzen;
+@using System.Text.Json;
+@inject ILoggerFactory LoggerFactory
+@inject Services.EmployeeService employeeService
+@inject Services.ClientService clientService
+@inject Services.SkillService skillService
+@inject Services.OrderTypeService orderTypeService
+@inject Services.OrderTemplateService orderTemplateService
+@inject DataListService dataListService
+@inject Services.OrderService orderService
+@inject Services.DaDataService dadataService
+@inject Services.UserGridSettingsService settingsService
+@inject Services.GeneralGridSettingsService generalGridSettingsService
+@inject Services.UserService userService
+
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+@inject NavigationManager navigationManager
+
+@inject Services.RabbitMQService rabbit
+
+<link rel="stylesheet" href="_content/Radzen.Blazor/css/material-base.css">
+
+<RadzenStack Orientation="Radzen.Orientation.Horizontal" AlignItems="Radzen.AlignItems.Center" Gap="1rem" Wrap="FlexWrap.Wrap">
+    <BlazorApp1.Components.SelectTemplateComponent />
+    <div class="vasya" @onclick="(e=>ShowHideFormat())">Формат</div>
+</RadzenStack>
+
+
+@*<EditForm Model="@nullBuffModel" OnSubmit="@(e=>FilterRecords(isExactMatch))">*@
+<div class="row">
+    <div class="col-12">
+
+        @if (currentTemplate != null
+        && orderViews != null
+        && orderRow != null
+        && orderRow.AllFields != null
+        && orderRow.AllFields.Count > 0)
+        {
+            @if (allSelectedFields != null @*&& allSelectedFields.Count() > 0*@)
+            {
+                <div class="mytable_block">
+                    <table class="mytable">
+                        <thead class="mytable_header">
+                            <tr class="myhead_tr">
+                                @foreach (var field in orderRow.AllFields.Join(allSelectedFields, x => x.Id, y => y.Id, (x, y) => x))
+                                {
+                                    <th class="col myth">
+                                        <div class="header_text">@field.FieldName</div>
+
+                                        <div class="order_filter">
+                                            <input type="text" class="order_filter2" @bind-value="field.FilterValue" @bind-value:event="oninput" @onkeyup="(e=>EnterPress(e))" />
+                                        </div>
+
+                                    </th>
+                                }
+                            </tr>
+                        </thead>
+
+                        @*КОСТЫЛЬ-строка. Заголовок перекрывает первый элемент*@
+                        <tr class="mytr">
+                            @foreach (var field in orderRow.AllFields.Join(allSelectedFields, x => x.Id, y => y.Id, (x, y) => x))
+                            {
+                                <td class="mytd">&nbsp;</td>
+                            }
+                        </tr>
+                        @*Конец костыля*@
+
+                        @foreach (var row in orderViews)
+                        {
+                            <tr class="mytr">
+                                @foreach (var field in row.AllFields.Join(allSelectedFields, x => x.Id, y => y.Id, (x, y) => x))
+                                {
+                                    <td class="mytd">
+                                        <a href="/order?id=@row.Order.Id">@field.FieldValueAsString</a>
+                                    </td>
+                                }
+                            </tr>
+                        }
+                    </table>
+                </div>
+            }
+        }
+
+    </div>
+</div>
+@*</EditForm>*@
+
+
+@if (isFormatShow)
+{
+    <MudDrawer @bind-Open="@isFormatShow" DisableOverlay="true" Elevation="1" Variant="@DrawerVariant.Temporary" Anchor="Anchor.Right" Width="650px" Height="calc(100vh)" Class="format_window">
+        <div>
+            @if (currentTemplate != null)
+            {
+                <div class="@(ShowHideTab((int)Tabs.UserFormats))">
+                    <div class="format_window_s1">
+                        <div class="format_window_cross">
+                            <MudIcon Icon="@Icons.Material.Filled.Close" Color="Color.Primary" Style="cursor: pointer;" @onclick="(e=>ShowHideFormat())" />
+                        </div>
+                        <ul class="format_tab_menu">
+                            <li class="@(currentTab == (int)Tabs.UserFormats ? "mytab_format_button left_bradius mytab_active_button" : "mytab_format_button left_bradius")" @onclick="(e=> SetCurrentTab((int)Tabs.UserFormats))">Настройка формата</li>
+                            <li class="@(currentTab == (int)Tabs.DeleteFormats ? "mytab_format_button right_bradius mytab_active_button" : "mytab_format_button right_bradius")" @onclick="(e=> SetCurrentTab((int)Tabs.DeleteFormats))">Список форматов</li>
+                        </ul>
+
+                        @if (allSettings != null && allSettings.Count > 0)
+                        {
+                            <div class="formats">
+                                <h5>Форматы:</h5>
+                                <RadzenDropDown Multiple="false"
+                                    Chips="false"
+                                    MaxSelectedLabels="0"
+                                    AllowClear="false"
+                                    AllowFiltering="true"
+                                    FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                                    Data=@allSettings
+                                    @bind-Value=@currentSettings
+                                    Change=@(args => OnChangeFormat(args))
+                                    Style="width: 100%; margin-bottom: 10px;" />
+
+                            </div>
+                        }
+
+
+
+                        @if (mainFields != null && mainFields.Count > 0)
+                        {
+                            <h5>Основные поля:</h5>
+                            <RadzenDropDown Multiple="true"
+                                Chips="false"
+                                MaxSelectedLabels="0"
+                                AllowClear="true"
+                                AllowFiltering="true"
+                                FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                                Data=@mainFields
+                                @bind-Value=@selectedMainFields
+                                SelectedItemsText="основных столбцов выбрано"
+                                Change=@(args => OnChangeFields(args, ""))
+                                Style="width: 100%; margin-bottom: 10px;" />
+                        }
+
+                        @if (currentTemplate.Fields != null && currentTemplate.Fields.Count > 0)
+                        {
+                            <h5>Поля диспетчера:</h5>
+                            <RadzenDropDown Multiple="true"
+                                Chips="false"
+                                MaxSelectedLabels="0"
+                                AllowClear="true"
+                                AllowFiltering="true"
+                                FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                                Data=@currentTemplate.Fields
+                                @bind-Value=@selectedFields
+                                SelectedItemsText="столбцов диспетчера выбрано"
+                                Change=@(args => OnChangeFields(args, ""))
+                                Style="width: 100%; margin-bottom: 10px;" />
+                        }
+
+                        @if (currentTemplate.ExecutorFields != null && currentTemplate.ExecutorFields.Count > 0)
+                        {
+                            <h5>Поля мастера(исполнителя):</h5>
+                            <RadzenDropDown Multiple="true"
+                                Chips="false"
+                                MaxSelectedLabels="0"
+                                AllowClear="true"
+                                AllowFiltering="true"
+                                FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                                Data=@currentTemplate.ExecutorFields
+                                @bind-Value=@selectedExecutorFields
+                                SelectedItemsText="столбцов мастера выбрано"
+                                Change=@(args => OnChangeFields(args, ""))
+                                Style="width: 100%; margin-bottom: 10px;" />
+                        }
+
+                        @if (currentSettings != null)
+                        {
+                            <h5>Поиск:</h5>
+                            <RadzenRadioButtonList @bind-Value=@currentSettings.IsExactMatch TValue="bool" Orientation=Radzen.Orientation.Vertical>
+                                <Items>
+                                    <RadzenRadioButtonListItem Text="Содержит" Value="false" TValue="bool" />
+                                    <RadzenRadioButtonListItem Text="Точное совпадение" Value="true" TValue="bool" />
+                                </Items>
+                            </RadzenRadioButtonList>
+                        }
+
+                        <div class="format_window_buttons">
+                            <button class="format_new_btn" @onclick="(()=>CreateAndSaveCurrentSettings())">Новый</button>
+
+                            @if (currentSettings != null && currentSettings.IsDefault == false)
+                            {
+                                if (currentSettings.IsGeneral)
+                                {
+                                    if (authenticationStateTask.Result.User.Claims.Where(t => t.Type == System.Security.Claims.ClaimTypes.Role).FirstOrDefault(x => x.Value == "Admin") != null)
+                                    {
+                                        <button class="format_save_btn" @onclick="(()=>SaveCurrentSettings())">Сохранить</button>
+                                    }
+                                }
+                                else
+                                {
+                                    <button class="format_save_btn" @onclick="(()=>SaveCurrentSettings())">Сохранить</button>
+                                }
+                                @*<button class="format_save_btn" @onclick="(()=>SaveCurrentSettings())">Сохранить</button>*@
+                            }
+                        </div>
+                    </div>
+                </div>
+
+                <div class="@(ShowHideTab((int)Tabs.DeleteFormats))">
+                    <div class="format_window_s1">
+                        <div class="format_window_cross">
+                            <MudIcon Icon="@Icons.Material.Filled.Close" Color="Color.Primary" Style="cursor: pointer;" @onclick="(e=>ShowHideFormat())" />
+                        </div>
+                        <ul class="format_tab_menu">
+                            <li class="@(currentTab == (int)Tabs.UserFormats ? "mytab_format_button left_bradius mytab_active_button" : "mytab_format_button left_bradius")" @onclick="(e=> SetCurrentTab((int)Tabs.UserFormats))">Настройка формата</li>
+                            <li class="@(currentTab == (int)Tabs.DeleteFormats ? "mytab_format_button right_bradius mytab_active_button" : "mytab_format_button right_bradius")" @onclick="(e=> SetCurrentTab((int)Tabs.DeleteFormats))">Список форматов</li>
+                        </ul>
+                        <div class="format_fixed">
+
+
+                            @*Если адм показывать юзера и общие(Кроме стандартных)*@
+                            @if (authenticationStateTask.Result.User.Claims.Where(t => t.Type == System.Security.Claims.ClaimTypes.Role).FirstOrDefault(x => x.Value == "Admin") != null)
+                            {
+                                @foreach (var format in allSettings.Where(x=> x.IsDefault == false))
+                                {
+                                    <table>
+                                        <tr>
+                                            <td>
+                                                <div class="format_list_text">@format.ToString()</div>
+                                            </td>
+                                            <td>
+                                                <div class="format_window_cross">
+                                                    <MudIcon Icon="@Icons.Material.Filled.Close" Color="Color.Error" Style="cursor: pointer;" @onclick="(e=>OpenDialogDeleteFormat(format.Id, format.Name, format.IsGeneral))" />
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </table>
+    
+                                }
+                            }
+                            else
+                            {
+                                @foreach (var format in allSettings.Where(x => x.IsGeneral == false))
+                                {
+                                    <table>
+                                        <tr>
+                                            <td>
+                                                <div class="format_list_text">@format.ToString()</div>
+                                            </td>
+                                            <td>
+                                                <div class="format_window_cross">
+                                                    <MudIcon Icon="@Icons.Material.Filled.Close" Color="Color.Error" Style="cursor: pointer;" @onclick="(e=>OpenDialogDeleteFormat(format.Id, format.Name, format.IsGeneral))" />
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                }
+                            }
+
+
+
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+
+
+
+    </MudDrawer>
+}
+
+
+@code
+{
+    public enum Tabs
+    {
+        UserFormats,
+        DeleteFormats,
+    }
+    private int currentTab = (int)Tabs.UserFormats;
+    private void SetCurrentTab(int tabInt)
+    {
+        currentTab = tabInt;
+    }
+    public string ShowHideTab(int inputTab)
+    {
+        if (currentTab != inputTab)
+        {
+            return "my_hidden";
+        }
+        else
+        {
+            return string.Empty;
+        }
+    }
+
+    private bool isFormatShow = false;
+    private void ShowHideFormat()
+    {
+        isFormatShow = !isFormatShow;
+    }
+
+    void Debug()
+    {
+
+    }
+
+
+    //private void OnFocus(FocusEventArgs e)
+    //{
+    //    //FilterRecords(isExactMatch);
+    //}
+
+    private void EnterPress(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            Console.Beep(300, 100);
+            if (currentSettings == null)
+            {
+                FilterRecords(false);
+            }
+            else
+            {
+                FilterRecords(currentSettings.IsExactMatch);
+            }
+        }
+    }
+
+
+
+
+    private List<TemplateFieldGridView> mainFields;
+    private IEnumerable<TemplateFieldGridView> selectedMainFields { get; set; } = new HashSet<TemplateFieldGridView>();
+    private IEnumerable<TemplateFieldGridView> selectedFields { get; set; } = new HashSet<TemplateFieldGridView>();
+    private IEnumerable<TemplateFieldGridView> selectedExecutorFields { get; set; } = new HashSet<TemplateFieldGridView>();
+    private List<TemplateFieldGridView>? allSelectedFields = new();
+
+
+    //private bool isExactMatch = false;
+
+    //Применить фильтры
+    private void FilterRecords(bool isExactMatch)
+    {
+        Console.Beep(1000, 100);
+
+        orderViews.Clear();
+        orderViews.AddRange(orderViewsAll);
+
+        if (orderRow.AllFields.Any(field => !string.IsNullOrEmpty(field.FilterValue)))//Только если фильтры не пустые
+        {
+            List<OrderGridView> list = new();
+            foreach (var filter in orderRow.AllFields)
+            {
+                if (!string.IsNullOrEmpty(filter.FilterValue))
+                {
+                    foreach (var row in orderViews)
+                    {
+                        foreach (var field in row.AllFields)
+                        {
+                            if (field.Id == filter.Id && !string.IsNullOrEmpty(filter.FilterValue))
+                            {
+                                if (isExactMatch) //Точное совпадение
+                                {
+                                    if (field.FieldValueAsString != null && field.FieldValueAsString == filter.FilterValue)
+                                    {
+                                        list.Add(row);
+                                    }
+                                }
+                                else //Включает
+                                {
+                                    if (field.FieldValueAsString != null && field.FieldValueAsString.ToLower().Contains(filter.FilterValue.ToLower()))
+                                    {
+                                        list.Add(row);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            orderViews = list;
+        }
+
+
+        orderViews = orderViews.ToList(); //Update Table if filters == null
+        StateHasChanged();
+    }
+
+    private void OnChangeFormat(object value)
+    {
+        selectedMainFields = currentSettings.MainFields;
+        selectedFields = currentSettings.Fields;
+        selectedExecutorFields = currentSettings.ExecutorFields;
+
+        UpdateSelected();
+    }
+
+
+
+    private void OnChangeFields(object value, string name)
+    {
+        UpdateSelected();
+        var str = value is IEnumerable<int> ? string.Join(", ", (IEnumerable<int>)value) : value;
+    }
+
+    private void UpdateSelected()
+    {
+        allSelectedFields.Clear();
+
+        //Основные Поля
+        //var mainFields = new Views.MainFields(orderRow.Order).Fields;
+        if (selectedMainFields != null && selectedMainFields.ToList().Count > 0)
+            foreach (TemplateFieldGridView f in selectedMainFields) { allSelectedFields.Add(f); }
+
+        //Поля Диспетчера
+        if (selectedFields != null && selectedFields.ToList().Count > 0)
+            foreach (TemplateFieldGridView f in selectedFields) { allSelectedFields.Add(f); }
+
+        //Поля Мастера
+        if (selectedExecutorFields != null && selectedExecutorFields.ToList().Count > 0)
+            foreach (TemplateFieldGridView f in selectedExecutorFields) { allSelectedFields.Add(f); }
+
+        //!!!Для Сортировки
+        for (int i = 0; i < allSelectedFields.Count; i++)
+        {
+            allSelectedFields[i].Position = i;
+        }
+        allSelectedFields = allSelectedFields.OrderBy(x => x.Position).ToList();
+
+        //Попытка отсортировать все 10000 заказов
+        foreach (var row in orderViews)
+        {
+            foreach (var f in row.AllFields)
+            {
+                foreach (var f1 in allSelectedFields)
+                {
+                    if (f.FieldName == f1.FieldName)
+                    {
+                        f.Position = f1.Position;
+                    }
+                }
+            }
+            row.AllFields = row.AllFields.OrderBy(x => x.Position).ToList();
+        }
+    }
+
+
+
+
+
+
+
+    [CascadingParameter]
+    private Task<AuthenticationState> authenticationStateTask { get; set; }
+
+    [Parameter]
+    [SupplyParameterFromQuery]
+    public string template { get; set; } //id
+
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!string.IsNullOrEmpty(template))
+        {
+            currentTemplate = new OrderTemplateView(orderTemplateService.GetOne(template));
+
+            GetOrders();
+            GetAllSettings();
+            LoadCurrentSettings();
+
+            /* Для проверки несовпадения заказов полей поменяного шаблона
+                foreach (var row in orderViews)
+                {
+                int counter = row.AllFields.Count();
+                if (counter != orderRow.AllFields.Count())
+                {
+                Console.Beep(4000, 100);
+            }
+            }*/
+
+            StateHasChanged();
+        }
+
+    }
+
+
+    private OrderTemplateView currentTemplate;
+
+    private OrderGridView? orderRow = null;//строка. последний заказ выбранного шаблона. Для получения диспетчерских полей шаблона
+
+
+    private List<OrderGridView> orderViews = new();
+    private List<OrderGridView> orderViewsAll = new();
+    private void GetOrders() //Получить заказы выбранного шаблона
+    {
+        orderViews.Clear();
+        orderViewsAll.Clear();
+        if (currentTemplate == null)
+        {
+            return;
+        }
+
+        List<Order> orders = orderService.GetAll().FindAll(x => x.Template.Id == currentTemplate.Id);
+        //orders = orders.OrderBy(x => x.OrderNum).ToList();
+        foreach (var order in orders)
+        {
+            orderViewsAll.Add(new OrderGridView(order));
+        }
+        orderViews.AddRange(orderViewsAll);
+
+        //Set orderRow
+        if (orderViews != null && orderViews.Count > 0)
+        {
+            orderRow = orderViews.Last();
+            mainFields = new Views.MainFields(orderRow.Order).Fields;
+            UpdateSelected();
+        }
+        else
+        {
+            orderRow = null;
+        }
+
+        //Сортировка по убыванию
+        orderViews = orderViews.OrderByDescending(x => x.Order.OrderNum).ToList();
+        //-----------------------------
+    }
+
+    private UserGridSettings? currentSettings;
+    private List<UserGridSettings> allSettings;
+    private List<GeneralGridSettings> generalSettings; //общие форматы
+    private GeneralGridSettings currentGeneralSettings; //выбранный общий формат
+    private void GetAllSettings() //Получить все форматы. Сначала Юзера потом Общие
+    {
+        allSettings = settingsService.GetSettings(currentTemplate.Id, authenticationStateTask.Result.User.Claims.FirstOrDefault(c => c.Type == "UserId").Value);
+        if (allSettings != null && allSettings.Count > 0)
+            allSettings = allSettings.OrderBy(x => x.Name).ToList(); //отсортировать по имени
+
+        generalSettings = generalGridSettingsService.GetSettings(currentTemplate.Id);
+        if (generalSettings != null && generalSettings.Count > 0)
+        {
+            List<UserGridSettings> settings = new();
+            foreach (var gSetting in generalSettings)
+            {
+                settings.Add(gSetting.ToUserGridSettings(authenticationStateTask.Result.User.Claims.FirstOrDefault(c => c.Type == "UserId").Value, isMain: false, isDefault: gSetting.IsDefault));
+            }
+
+            if (settings != null && settings.Count > 0)
+                settings = settings.OrderBy(x => x.Name).ToList();//отсортировать по имени
+
+            allSettings.AddRange(settings);
+        }
+    }
+    private void LoadCurrentSettings()
+    {
+        currentSettings = allSettings.FirstOrDefault(x => x.IsMain == true);
+
+        if (currentSettings == null)
+        {
+            if (generalSettings == null || generalSettings.Count == 0)
+                return;
+
+            var tempGeneralSettings = generalSettings.FirstOrDefault(x => x.IsDefault == true);
+            if (tempGeneralSettings == null)
+                return;
+
+            currentSettings = tempGeneralSettings.ToUserGridSettings(authenticationStateTask.Result.User.Claims.FirstOrDefault(c => c.Type == "UserId").Value, isMain: true, isDefault: tempGeneralSettings.IsDefault);
+        }
+
+        if (currentSettings.MainFields != null && currentSettings.MainFields.Count > 0)
+        {
+            selectedMainFields = currentSettings.MainFields;
+        }
+
+        if (currentSettings.Fields != null && currentSettings.Fields.Count > 0)
+        {
+            selectedFields = currentSettings.Fields;
+        }
+
+        if (currentSettings.ExecutorFields != null && currentSettings.ExecutorFields.Count > 0)
+        {
+            selectedExecutorFields = currentSettings.ExecutorFields;
+        }
+
+        UpdateSelected();
+    }
+
+    private async Task SaveCurrentSettings()
+    {
+        if (currentSettings == null)
+        {
+            return;
+        }
+        if (currentSettings.IsDefault)
+        {
+            ShowNotification(Severity.Error, "Невозможно изменить стандартный формат");
+            return;
+        }
+
+        string formatName = string.Empty;
+        if (!string.IsNullOrEmpty(currentSettings.Name))
+        {
+            formatName = currentSettings.Name;
+        }
+
+        //Проверяем есть ли роль админа
+        var adminRole = authenticationStateTask.Result.User.Claims.Where(t => t.Type == System.Security.Claims.ClaimTypes.Role).FirstOrDefault(x => x.Value == "Admin");
+        bool isAdmin = false;
+        if (adminRole != null)
+        {
+            isAdmin = true;
+        }
+
+        var parameters = new DialogParameters
+        {
+            ["settingsName"] = formatName, ["isAdmin"] = isAdmin, 
+            ["dialogType"] = GridSettingsDialogType.Save.ToString(),
+            ["IsGeneral"] = currentSettings.IsGeneral
+        }; //передать параметры
+
+        var options = new MudBlazor.DialogOptions { CloseOnEscapeKey = true };
+        var dialog = DialogService.Show<Components.NewUserGridSettingsDialog>("Сохранить формат", parameters, options);
+
+        var result = await dialog.Result;
+        if (!result.Cancelled)
+        {
+            //Получить параметры
+            List<object> listResult = result.Data as List<object>;
+            string name = listResult[0] as string;
+            bool? isMain = listResult[1] as bool?;
+            bool? isGeneral = listResult[2] as bool?;
+
+            if (!string.IsNullOrEmpty(name))
+            {
+                //Формат пользователя
+                if ((bool)isGeneral == false)
+                {
+                    if (currentSettings != null)
+                    {
+                        currentSettings.IsGeneral = false;
+                        currentSettings.MainFields = selectedMainFields.ToList();
+                        currentSettings.Fields = selectedFields.ToList();
+                        currentSettings.ExecutorFields = selectedExecutorFields.ToList();
+                        currentSettings.IsMain = (bool)isMain;
+
+                        if (currentSettings.IsMain == true)
+                        {
+                            settingsService.SetMainSettingsFalse(currentSettings.TemplateId, currentSettings.UserId);
+                        }
+                        settingsService.SaveOrUpdate(currentSettings);
+
+                        //Обновить список форматов и общих форматов
+                        GetAllSettings();
+                    }
+                }
+                //Общий формат
+                else
+                {
+                    if (currentSettings != null)
+                    {
+                        //Найти среди ОбщихФорматов с таким же id как у ТекущегоПользовательского
+                        var generalSettings = generalGridSettingsService.GetSettings(currentSettings.TemplateId).Find(x => x.Id == currentSettings.Id);
+                        if (generalSettings == null)
+                        {
+                            ShowNotification(Severity.Warning, "Общий формат с таким Id не найден");
+                            return;
+                        }
+                        generalSettings.Name = name;
+                        generalSettings.MainFields = selectedMainFields.ToList();
+                        generalSettings.Fields = selectedFields.ToList();
+                        generalSettings.ExecutorFields = selectedExecutorFields.ToList();
+                        generalGridSettingsService.SaveOrUpdate(generalSettings);
+
+                        //Обновить список форматов и общих форматов
+                        GetAllSettings();
+                    }
+                }
+
+
+            }
+        }
+
+
+    }
+    private async Task CreateAndSaveCurrentSettings()
+    {
+        //Проверяем есть ли роль админа
+        var adminRole = authenticationStateTask.Result.User.Claims.Where(t => t.Type == System.Security.Claims.ClaimTypes.Role).FirstOrDefault(x => x.Value == "Admin");
+        bool isAdmin = false;
+        if (adminRole != null)
+        {
+            isAdmin = true;
+        }
+
+        var parameters = new DialogParameters {
+            ["isAdmin"] = isAdmin,
+            ["dialogType"] = GridSettingsDialogType.New.ToString(),
+        }; //передать параметры
+        var options = new MudBlazor.DialogOptions { CloseOnEscapeKey = true };
+        var dialog = DialogService.Show<Components.NewUserGridSettingsDialog>("Новый формат", parameters, options);
+
+        var result = await dialog.Result;
+        if (!result.Cancelled)
+        {
+            List<object> listResult = result.Data as List<object>;
+            string name = listResult[0] as string;
+            bool? isMain = listResult[1] as bool?;
+            bool? isGeneral = listResult[2] as bool?;
+
+            if (!string.IsNullOrEmpty(name))
+            {
+                //Формат пользователя
+                if ((bool)isGeneral == false)
+                {
+                    currentSettings = new UserGridSettings(
+                    authenticationStateTask.Result.User.Claims.FirstOrDefault(c => c.Type == "UserId").Value,
+                    currentTemplate.Id,
+                    name,
+                    selectedMainFields.ToList(),
+                    selectedFields.ToList(),
+                    selectedExecutorFields.ToList(),
+                    (bool)isMain,
+                    isGeneral: false,
+                    isDefault: false
+                    );
+
+                    if (isMain == true)
+                    {
+                        //Сделать предыдущий основной формат не основным
+                        settingsService.SetMainSettingsFalse(currentTemplate.Id, authenticationStateTask.Result.User.Claims.FirstOrDefault(c => c.Type == "UserId").Value);
+                    }
+
+                    //Сохранить текущий формат
+                    settingsService.SaveOrUpdate(currentSettings);
+
+                    //Обновить список форматов
+                    GetAllSettings();
+                }
+
+                //Общий формат
+                else
+                {
+                    var defaultSettings = new GeneralGridSettings(false, currentTemplate.Id, name, selectedMainFields.ToList(), selectedFields.ToList(), selectedExecutorFields.ToList());
+                    //если найден
+                    defaultSettings.MainFields = selectedMainFields.ToList();
+                    defaultSettings.Fields = selectedFields.ToList();
+                    defaultSettings.ExecutorFields = selectedExecutorFields.ToList();
+                    generalGridSettingsService.SaveOrUpdate(defaultSettings);
+
+                    currentSettings = defaultSettings.ToUserGridSettings(authenticationStateTask.Result.User.Claims.FirstOrDefault(c => c.Type == "UserId").Value, isMain: false, isDefault: false);
+
+                    //Обновить список форматов и общих форматов
+                    GetAllSettings();
+                }
+            }
+        }
+    }
+
+
+    private async Task OpenDialogDeleteFormat(string formatId, string name, bool isGeneral)
+    {
+        var options = new MudBlazor.DialogOptions { CloseOnEscapeKey = true };
+        var dialog = DialogService.Show<Components.Dialog>("Удалить " + name + "?", options);
+
+        var result = await dialog.Result;
+        if (!result.Cancelled)
+        {
+            long delResult = 0;
+
+            if (isGeneral)
+            {
+                delResult = generalGridSettingsService.Delete(formatId);
+            }
+            else
+            {
+                delResult = settingsService.Delete(formatId);
+            }
+
+            if (delResult <= 0)
+            {
+                ShowNotification(Severity.Error, "Ошибка удаления данных");
+            }
+            else
+            {
+                //Обновить список форматов и общих форматов
+                GetAllSettings();
+            }
+        }
+    }
+
+    private void ShowNotification(Severity severity, string text)
+    {
+        Snackbar.Clear();
+        Snackbar.Add(text, severity);
+    }
+
+
+}

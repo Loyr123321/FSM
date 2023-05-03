@@ -1,0 +1,85 @@
+﻿@page "/templates"
+@attribute [Authorize(Policy = "RequireRole")]
+@using BlazorApp1.Models
+@using BlazorApp1.Services
+@using BlazorApp1.Views
+@using MudBlazor.Utilities
+@inject ILoggerFactory LoggerFactory
+@inject Services.OrderTypeService orderTypeService
+@inject Services.SkillService skillService
+@inject Services.OrderTemplateService orderTemplateService
+@inject DataListService dataListService
+
+@inject ISnackbar Snackbar
+
+<div class="row">
+
+    @*    <div class="col-12 ">
+    <h5 class="page_header_text"> Шаблоны</h5>
+    </div>*@
+
+
+    <div class="col-12" style="margin-bottom:20px">
+        <a href="/template" style="text-decoration: none;">
+            <MudButton Class="button_add_to_data">
+                <MudText Class="button_add_to_data_text">
+                    Новый шаблон
+                </MudText>
+            </MudButton>
+        </a>
+    </div>
+
+    <div class="col-6">
+        <table class="table table-borderless table_borders ">
+            <thead>
+                <tr class="table_d_head">
+                    <th class="table_width">Шаблон</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (templates.Count() > 0)
+                {
+                    @foreach (var template in templates)
+                    {
+                        <tr class="focused_on_row">
+                            <td>
+                                <a href="/template?id=@template.Id" style="text-decoration: none;">
+                                    <div class="table_data_text" style="width:100%;">
+                                        @template.OrderTemplateName
+                                    </div>
+                                </a>
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@code
+{
+    public void Debug()
+    {
+
+    }
+    public void Debug(TemplateFieldView context)
+    {
+        var logger = LoggerFactory.CreateLogger<string>();
+        logger.LogWarning(context.TemplateField.Id);
+    }
+
+    public List<FileView> files = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        GetTemplates();
+    }
+
+    //Template orderTemplate = new Template();
+    List<OrderTemplate> templates = new();
+    private void GetTemplates()
+    {
+        templates = orderTemplateService.GetAll();
+    }
+}

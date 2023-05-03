@@ -1,0 +1,71 @@
+﻿@page "/settings"
+
+@using BlazorApp1.Auth;
+@using BlazorApp1.Models
+@using BlazorApp1.Services
+@using BlazorApp1.Utils;
+@using BlazorApp1.Views
+@using Microsoft.AspNetCore.Authentication;
+@using MudBlazor.Utilities
+@using Newtonsoft.Json;
+@using Radzen;
+@using System.Security.Claims;
+@inject ILoggerFactory LoggerFactory
+@inject Services.EmployeeService employeeService
+@inject Services.ClientService clientService
+@inject Services.SkillService skillService
+@inject Services.OrderTypeService orderTypeService
+@inject Services.OrderTemplateService orderTemplateService
+@inject DataListService dataListService
+@inject Services.OrderService orderService
+@inject Services.DaDataService dadataService
+@inject ISnackbar Snackbar
+@inject NavigationManager NavigationManager
+@inject Services.RabbitMQService rabbit
+@inject UserService userService
+@inject IHttpContextAccessor HttpContextAccessor
+@inject MailService mailService
+
+
+<div class="row ">
+    <div class="col-12 block_form">
+        <h5 class="page_header_text">
+            <span>Настройки</span>
+        </h5>
+    </div>
+
+
+    <div class="col-12">
+        <MudTabs Class="settings" HideSlider=true @ref="tabs">
+
+            <MudTabPanel Text="Шаблоны" Class="block_form">
+
+                <TemplatesPage />
+
+            </MudTabPanel>
+
+            <MudTabPanel Text="Списки значений">
+                <DataListsPage />
+            </MudTabPanel>
+
+            <MudTabPanel Text="Регионы">
+                <RegionsPage />
+            </MudTabPanel>
+
+            <MudTabPanel Text="Типы заказов">
+                <OrderTypePage />
+            </MudTabPanel>
+
+            <MudTabPanel Text="Причины отмены">
+                <CancellationReasonsPage />
+            </MudTabPanel>
+
+            <MudTabPanel Text="Навыки">
+                <SkillPage />
+            </MudTabPanel>
+        </MudTabs>
+    </div>
+</div>
+@code {
+    MudTabs tabs;
+}

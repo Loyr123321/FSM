@@ -1,0 +1,382 @@
+﻿@page "/datalists"
+@attribute [Authorize(Policy = "RequireRole")]
+@using BlazorApp1.Components
+@using BlazorApp1.Models
+@using BlazorApp1.Models.Validation;
+@using BlazorApp1.Services
+
+@using Blazored.Toast.Configuration
+@inject DataListService dataListService
+@inject IToastService toastService
+@inject ILoggerFactory LoggerFactory
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+
+@using MudBlazor.Utilities
+
+<div class="row">
+    @*    <div class="col-12">
+    <h5 class="page_header_text"> Списки значений</h5>
+    </div>*@
+
+    <div class="col-12  col-sm-12 col-md-12 col-lg-6">
+        <div class="row" style="margin-bottom: 15px;">
+            <div class="col-6">
+                <MudButton Disabled="@_processing" Variant="Variant.Filled" Class="create_new_btn" OnClick="@(e=>CreateSingleDataList())">
+                    <MudText Class="col-12 create_new_btn_text">Создать список c одиночным выбором</MudText>
+                </MudButton>
+            </div>
+            <div class="col-6" style="text-align: right;">
+                <MudButton Disabled="@_processing" Variant="Variant.Filled" Class="create_new_btn" OnClick="@(e=>CreateMyltipleDataList())">
+                    <MudText Class="col-12 create_new_btn_text">Создать список c множественным выбором</MudText>
+                </MudButton>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="row">
+    <div class="col-12  col-sm-12 col-md-12 col-lg-6">
+        <table class="table table-bordered table_borders">
+            <thead>
+                <tr class="table_d_head">
+                    <th>Список</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (datalists != null && datalists.Count() > 0)
+                {
+                    @foreach (var datalist in datalists)
+                    {
+                        <tr class="table_data_text">
+                            <td>@datalist.Name</td>
+                            <td>
+                                <div class="fix_width01_btn" style="float: right;">
+                                    <MudButton Disabled="@_processing" Variant="Variant.Filled" Class="button_change_data" OnClick="@(e=>Edit(datalist.Id))">
+                                        <MudText Class="button_change_n_del_data_text">Изменить</MudText>
+                                    </MudButton>
+                                    <MudButton Disabled="@_processing" Variant="Variant.Filled" Color="Color.Error" OnClick="@(e=>OpenDialogDelete(datalist.Id, datalist.Name))" Class="button_delete_data">
+                                        <MudText Class="button_change_n_del_data_text">Удалить</MudText>
+                                    </MudButton>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+    <div class="col-4 dValue_add_body ">
+        <div class="region_dValue_fix">
+            <label class="dvalue_name">
+                Название списка @if (dataList.IsSingleSelection)
+                {
+                    <text>(О)</text>
+                }
+                else
+                {
+                    <text>(М)</text>
+                }
+            </label>
+            <input class="dValue_add_main_input z_101" @bind="dataList.Name" />
+
+            @if (values.Count > 0)
+            {
+                <MudDropContainer @ref="_dropContainer" T="DataValue" Items="values" ItemsSelector="@((item,dropzone) => item.Selector == "myselector")" ItemDropped="ItemUpdated" Class="d-flex flex-wrap flex-grow-1" ItemIsDisabled="@( (item) => true)">
+                    <ChildContent>
+                        <MudPaper Class="ma-4 flex-grow-1">
+                            <MudList Clickable="false" Class="d-flex flex-column mud-height-full">
+                                <MudDropZone T="DataValue" Identifier="1" Class="flex-grow-1" AllowReorder="true" />
+                            </MudList>
+                        </MudPaper>
+                    </ChildContent>
+                    <ItemRenderer>
+                        <div class="row align-items-center row_space_between">
+                            <div class="col-1 col-sm-2" style="width:fit-content" draggable="true">
+                                <button class="dragdrop_button"></button>
+                            </div>
+                            <div class="col-6 col-sm-8">
+                                <input class="form_input_Value z_101" @bind="@context.Value" style="width:100%;" />
+                            </div>
+
+                            <div class="col-1 col-sm-2" style="width:fit-content">
+                                <button class="button_Value_delete" @onclick="(e => DeleteValue(context))">
+                                </button>
+                            </div>
+                        </div>
+                    </ItemRenderer>
+                </MudDropContainer>
+            }
+            <div class="type_btn_group">
+                <button @onclick="@(e => AddValue())" Title="Add">
+                    <div class="button_add_value"></div>
+                    <span class="text_button_add_value">Добавить значение </span>
+                </button>
+
+            </div>
+
+
+
+            <div style="float: right; margin-top:15px;">
+                <MudButton Disabled="@_processing" Variant="Variant.Filled" Class="button_discardChange" OnClick="@(e=>Reset())">
+                    <MudText Class="button_discardChange_text">Отменить</MudText>
+                </MudButton>
+                <MudButton Disabled="@_processing" Variant="Variant.Filled" Class="button_saveChange" OnClick="@(e=>Save())">
+                    @if (_processing)
+                    {
+                        <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                        <MudText Class="ms-2">Сохраняется</MudText>
+                    }
+                    else
+                    {
+                        <MudText Class="button_saveChange_text">Сохранить</MudText>
+                    }
+                </MudButton>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+
+
+
+@code
+{
+    protected override async Task OnInitializedAsync()
+    {
+        GetDataLists();
+        GetValues();
+    }
+    private bool _processing = false;
+    private void ShowNotification(Severity severity, string text)
+    {
+        Snackbar.Clear();
+        Snackbar.Add(text, severity);
+    }
+
+    private MudDropContainer<DataValue> _dropContainer;
+    private void ItemUpdated(MudItemDropInfo<DataValue> dropItem)
+    {
+        var indexOffset = dropItem.DropzoneIdentifier switch
+        {
+            "2" => values.Count(x => x.Selector == "myselector"),
+            _ => 0,
+        };
+        values.UpdateOrder(dropItem, item => item.Position, indexOffset);
+    }
+    private void Refresh()
+    {
+        if (_dropContainer != null)
+        {
+            _dropContainer.Items = values;
+            _dropContainer.Refresh();
+
+            ////_dropContainer.ItemRenderer.FOCUS()
+        }
+    }
+
+    private List<Models.DataList> datalists;
+    private Models.DataList dataList = new();
+    private void GetDataLists()
+    {
+        datalists = dataListService.GetAll();
+    }
+    private List<DataValue> values = new();
+    private void GetValues()
+    {
+        if (dataList != null)
+        {
+            if (dataList.Values != null)
+            {
+                values = dataList.Values.OrderBy(x => x.Position).ToList();
+            }
+        }
+    }
+    private void AddValue()
+    {
+        var validation = ValidationValues();
+        if (validation != ValidationCode.ValidationSuccess)
+        {
+            return;
+        }
+
+        var value = new DataValue();
+        if (values.Count() > 0)
+        {
+            value.Position = values[values.Count - 1].Position + 1;
+        }
+        values.Add(value);
+        Refresh();
+    }
+
+    private string ValidationValues()
+    {
+        int count = 0;
+        foreach (var value in values.Where(x => x.Selector == "myselector"))
+        {
+            if (string.IsNullOrWhiteSpace(value.Value))
+            {
+                ShowNotification(Severity.Warning, "Заполните предыдущее поле");
+                return ValidationCode.EmptyFieldsNames;
+            }
+            count++;
+        }
+
+        var list = values.Where(x => x.Selector == "myselector").ToList();
+        var distinctList = values.Where(x => x.Selector == "myselector").GroupBy(x => x.Value).Select(g => g.First()).ToList();
+        var isUnique = (list.Count() == distinctList.Count());
+        if (isUnique == false)
+        {
+            ShowNotification(Severity.Warning, "Дубликаты не допускаются");
+            return ValidationCode.DuplicateFields;
+        }
+
+        return ValidationCode.ValidationSuccess;
+    }
+    private string Validation()
+    {
+        if (string.IsNullOrWhiteSpace(dataList.Name))
+        {
+            ShowNotification(Severity.Warning, "Не задано название списка");
+            return ValidationCode.EmptyName;
+        }
+
+        int count = 0;
+        foreach (var value in values.Where(x => x.Selector == "myselector"))
+        {
+            if (string.IsNullOrWhiteSpace(value.Value))
+            {
+                ShowNotification(Severity.Warning, "Не все поля заполнены");
+                return ValidationCode.EmptyFieldsNames;
+            }
+            count++;
+        }
+        if (count == 0)
+        {
+            ShowNotification(Severity.Warning, "Список пуст");
+            return ValidationCode.CountIsNull;
+        }
+
+        var list = values.Where(x => x.Selector == "myselector").ToList();
+        var distinctList = values.Where(x => x.Selector == "myselector").GroupBy(x => x.Value).Select(g => g.First()).ToList();
+        var isUnique = (list.Count() == distinctList.Count());
+        if (isUnique == false)
+        {
+            ShowNotification(Severity.Warning, "Дубликаты не допускаются");
+            return ValidationCode.DuplicateFields;
+        }
+
+        return ValidationCode.ValidationSuccess;
+    }
+    private async void Save()
+    {
+        try
+        {
+            _processing = true; await Task.Delay(1);
+
+            var valuesToSave = new List<DataValue>();
+            foreach (var value in values)
+            {
+                if (value.Selector != "deleted")
+                {
+                    valuesToSave.Add(value);
+                }
+            }
+
+            //SAVE---
+            dataList.Values = valuesToSave;
+
+            var validation = Validation();
+            if (validation != ValidationCode.ValidationSuccess)
+            {
+                return;
+            }
+
+            dataListService.SaveOrUpdate(dataList);
+
+            Reset();
+            ShowNotification(Severity.Success, "Список сохранен");
+        }
+        catch (MongoDB.Driver.MongoWriteException ex)
+        {
+            if (ex.WriteError.Category == MongoDB.Driver.ServerErrorCategory.DuplicateKey)
+            {
+                ShowNotification(Severity.Warning, "Дубликаты названий списков не допустимы");
+            }
+            return;
+        }
+        catch (Exception ex)
+        {
+            ShowNotification(Severity.Error, "Ошибка сохранения данных");
+            Console.WriteLine("Save_Exception: " + ex.Message);
+            return;
+        }
+        finally
+        {
+            _processing = false;
+            Refresh();
+            StateHasChanged();
+        }
+    }
+
+    private void Edit(string id)
+    {
+        dataList = datalists.FirstOrDefault(x => x.Id == id);
+        if (dataList.Values != null)
+        {
+            values = dataList.Values.OrderBy(x => x.Position).ToList();
+            Refresh();
+        }
+
+    }
+    private void Reset()
+    {
+        dataList = new();
+        values.Clear();
+
+        GetDataLists();
+        GetValues();
+    }
+    private void CreateSingleDataList()
+    {
+        dataList = new();
+        values.Clear();
+        dataList.IsSingleSelection = true;
+    }
+    private void CreateMyltipleDataList()
+    {
+        dataList = new();
+        values.Clear();
+        dataList.IsSingleSelection = false;
+    }
+    private void DeleteValue(DataValue value)
+    {
+        value.Selector = "deleted";
+        Refresh();
+    }
+    private void Delete(string id)
+    {
+        dataListService.Delete(id);
+
+
+        Reset();
+        GetDataLists();
+        Refresh();
+        StateHasChanged();
+    }
+    private async void OpenDialogDelete(string id, string name)
+    {
+        var options = new DialogOptions { CloseOnEscapeKey = true };
+        var dialog = DialogService.Show<Dialog>("Удалить " + name + "?", options);
+
+        var result = await dialog.Result;
+        if (!result.Cancelled)
+        {
+            Delete(id);
+        }
+
+    }
+
+}

@@ -1,0 +1,251 @@
+﻿@page "/ordersAll"
+@attribute [Authorize(Policy = "RequireRole")]
+@using BlazorApp1.Models
+@using BlazorApp1.Services
+@using BlazorApp1.Views
+@using MudBlazor.Utilities
+@using Radzen;
+@inject ILoggerFactory LoggerFactory
+@inject Services.EmployeeService employeeService
+@inject Services.ClientService clientService
+@inject Services.SkillService skillService
+@inject Services.OrderTypeService orderTypeService
+@inject Services.OrderTemplateService orderTemplateService
+@inject DataListService dataListService
+@inject Services.OrderService orderService
+@inject Services.DaDataService dadataService
+
+@inject ISnackbar Snackbar
+@inject NavigationManager NavigationManager
+
+@inject Services.RabbitMQService rabbit
+
+<link rel="stylesheet" href="_content/Radzen.Blazor/css/material-base.css">
+<div class="row">
+
+    <div class="col-12">
+
+        <RadzenDataGrid Data="@orderViews" TItem="OrderGridView"
+                        Density="Density.Compact"
+                        GridLines="DataGridGridLines.Both"
+                        AllowAlternatingRows="false"
+                        PagerHorizontalAlign="HorizontalAlign.Right"
+                        AllowPaging="true"
+                        PageNumbersCount="3"
+                        PageSize="25"
+                        PageSizeOptions="new int[] { 25, 50, 100, 250 }"
+                        ShowPagingSummary="true"
+                        FilterMode="FilterMode.Simple"
+                        LogicalFilterOperator="LogicalFilterOperator.Or"
+                        AllowFiltering="true"
+                        AllowColumnPicking="true"
+                        ColumnsShowingText="столбцов выбрано"
+                        ColumnsText="Столбцы"
+                        AllowSorting="true"
+                        Style="width: calc(100vw - 175px); height:calc(100vh - 150px);"
+                        ColumnWidth="300px"
+                        AllowColumnResize="true"
+                        ColumnResized=@OnColumnResized
+                        RowRender="RowRender"
+                        EmptyText="Заказы не найдены"
+                        @ref="grid">
+            <Columns>
+                <!---->
+                <RadzenDataGridColumn TItem="OrderGridView" Title="№ Заявки" Sortable="false" Filterable="true" Width="80px">
+                    <FilterTemplate>
+                        <RadzenTextBox @bind-Value="@filterType" Change=@FilterRecords Style="width:100%;" Class="w-100" />
+                    </FilterTemplate>
+                    <Template Context="context">
+                        @if (context.Order.OrderNum != null)
+                        {
+                            <a href="/order?id=@context.Order.Id" style="text-decoration: none;">
+                                <div style="white-space:pre-wrap">@context.Order.OrderNum</div>
+                            </a>
+                        }
+                    </Template>
+                </RadzenDataGridColumn>
+
+                <RadzenDataGridColumn TItem="OrderGridView" Title="Имя Заказа" Sortable="true" Filterable="true" Width="120px" Visible="false">
+                    <FilterTemplate>
+                        <RadzenTextBox @bind-Value="@filterType" Change=@FilterRecords Style="width:100%;" Class="w-100" />
+                    </FilterTemplate>
+                    <Template Context="context">
+                        @if (context.Order.OrderName != null)
+                        {
+                            <a href="/order?id=@context.Order.Id" style="text-decoration: none;">
+                                <div style="white-space:pre-wrap">@context.Order.OrderName</div>
+                            </a>
+                        }
+                    </Template>
+                </RadzenDataGridColumn>
+
+
+                <RadzenDataGridColumn TItem="OrderGridView" Title="Статус" Sortable="true" Filterable="true" Width="120px">
+                    <FilterTemplate>
+                        <RadzenTextBox @bind-Value="@filterType" Change=@FilterRecords Style="width:100%;" Class="w-100" />
+                    </FilterTemplate>
+                    <Template Context="context">
+                        @if (context.Order.OrderStatus != null)
+                        {
+                            <div style="white-space:pre-wrap">@context.Order.OrderStatus.StatusName</div>
+                        }
+                    </Template>
+                </RadzenDataGridColumn>
+
+                <RadzenDataGridColumn TItem="OrderGridView" Title="Шаблон" Sortable="true" Filterable="true" Width="140px">
+                    <FilterTemplate>
+                        <RadzenTextBox @bind-Value="@filterType" Change=@FilterRecords Style="width:100%;" Class="w-100" />
+                    </FilterTemplate>
+                    <Template Context="context">
+                        @if (context.Order.Template.OrderTemplateName != null)
+                        {
+                            <div style="white-space:pre-wrap">@context.Order.Template.OrderTemplateName</div>
+                        }
+                    </Template>
+                </RadzenDataGridColumn>
+
+                <RadzenDataGridColumn TItem="OrderGridView" Title="Тип заказа" Sortable="true" Filterable="true" Width="120px">
+                    <FilterTemplate>
+                        <RadzenTextBox @bind-Value="@filterType" Change=@FilterRecords Style="width:100%;" Class="w-100" />
+                    </FilterTemplate>
+                    <Template Context="context">
+                        @if (context.Order.Template.OrderType != null)
+                        {
+                            <div style="white-space:pre-wrap">@context.Order.Template.OrderType.ToString()</div>
+                        }
+                    </Template>
+                </RadzenDataGridColumn>
+
+                <RadzenDataGridColumn TItem="OrderGridView" Property="Order.Template.OrderDescription" Title="Описание заказа" Width="120px">
+                    <FilterTemplate>
+                        <RadzenTextBox @bind-Value="@filterType" Change=@FilterRecords Style="width:100%;" Class="w-100" />
+                    </FilterTemplate>
+                </RadzenDataGridColumn>
+
+                <RadzenDataGridColumn TItem="OrderGridView" Title="Адрес" Sortable="true" Filterable="true" Width="300px">
+                    <FilterTemplate>
+                        <RadzenTextBox @bind-Value="@filterType" Change=@FilterRecords Style="width:100%;" Class="w-100" />
+                    </FilterTemplate>
+                    <Template Context="context">
+                        @if (context.Order.Address != null && !string.IsNullOrEmpty(context.Order.Address.FullAddress))
+                        {
+                            <div style="white-space:pre-wrap">@context.Order.Address.FullAddress</div>
+                        }
+                    </Template>
+                </RadzenDataGridColumn>
+
+                <RadzenDataGridColumn TItem="OrderGridView" Title="Исполнитель" Sortable="true" Filterable="true" Width="200px">
+                    <FilterTemplate>
+                        <RadzenTextBox @bind-Value="@filterType" Change=@FilterRecords Style="width:100%;" Class="w-100" />
+                    </FilterTemplate>
+                    <Template Context="context">
+                        @if (context.Order.OrderEmployeeExecutor != null)
+                        {
+                            <div style="white-space:pre-wrap">@context.Order.OrderEmployeeExecutor.GetFullName()</div>
+
+                            @if (!string.IsNullOrEmpty(context.Order.OrderEmployeeExecutor.Phone))
+                            {
+                                <div style="white-space:pre-wrap">@context.Order.OrderEmployeeExecutor.Phone</div>
+                            }
+                        }
+                    </Template>
+                </RadzenDataGridColumn>
+
+                <RadzenDataGridColumn TItem="OrderGridView" Title="Контакты" Sortable="true" Filterable="true" Width="200px">
+                    <FilterTemplate>
+                        <RadzenTextBox @bind-Value="@filterType" Change=@FilterRecords Style="width:100%;" Class="w-100" />
+                    </FilterTemplate>
+                    <Template Context="context">
+                        @if (context.Order.Contacts != null && context.Order.Contacts.Count() > 0)
+                        {
+                            var contact = context.Order.Contacts.First(x => x.IsMain);
+                            <div style="white-space:pre-wrap">@contact.ClientContactName</div>
+                            <div style="white-space:pre-wrap">@contact.Phone</div>
+                        }
+                    </Template>
+                </RadzenDataGridColumn>
+
+                <RadzenDataGridColumn TItem="OrderGridView" Title="Планируемая дата" Sortable="true" Filterable="true" Width="120px">
+                    <FilterTemplate>
+                        <RadzenTextBox @bind-Value="@filterType" Change=@FilterRecords Style="width:100%;" Class="w-100" />
+                    </FilterTemplate>
+                    <Template Context="context">
+                        @if (context.Order.PlannedDate != null)
+                        {
+                            <div style="white-space:pre-wrap">
+                                <div>@context.Order.PlannedDate.Value.ToShortDateString()</div>
+
+                                @if (context.Order.PlannedTime != null)
+                                {
+                                    <div>@context.Order.PlannedTime.ToString()</div>
+                                }
+                            </div>
+
+                        }
+                    </Template>
+                </RadzenDataGridColumn>
+
+
+            </Columns>
+        </RadzenDataGrid>
+    </div>
+
+
+
+</div>
+
+@code
+{
+    private string? filterNum;
+    private string? filterStatus;
+    private string? filterTemplate;
+    private string? filterType;
+    private string? filterDescription;
+    private string? filterAddress;
+    private string? filterExecutor;
+    private string? filterContacts;
+    private string? filterPlanDate;
+
+    private void FilterRecords(object value)
+    {
+    }
+
+    public void Debug()
+    {
+
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        GetOrders();
+    }
+
+    public List<OrderGridView> orderViews = new();
+    public List<OrderGridView> orderViewsAll = new();
+    private void GetOrders()
+    {
+        List<Order> orders = orderService.GetAll();//.OrderByDescending(x=>x.OrderNum).ToList();
+        foreach (var order in orders)
+        {
+            orderViewsAll.Add(new OrderGridView(order));
+        }
+        orderViews.AddRange(orderViewsAll);
+    }
+    private void RowRender(RowRenderEventArgs<OrderGridView> args)
+    {
+        args.Attributes.Add("class", "STATUS_" + args.Data.Order.OrderStatus.StatusCode);
+    }
+     void OnColumnResized(DataGridColumnResizedEventArgs<OrderGridView> args)
+    {
+        //console.Log($"Resized {args.Column.Title} to {args.Width} pixels");
+    }
+
+    RadzenDataGrid<OrderGridView> grid;
+    IList<OrderGridView> selectedOrders;
+    private void ShowNotification(Severity severity, string text)
+    {
+        Snackbar.Clear();
+        Snackbar.Add(text, severity);
+    }
+
+}

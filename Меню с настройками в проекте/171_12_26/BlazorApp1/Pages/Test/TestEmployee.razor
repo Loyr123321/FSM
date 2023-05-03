@@ -1,0 +1,20 @@
+﻿@page "/test_employee"
+@page "/employee_test"
+@attribute [Authorize(Policy = "RequireRole")]
+@using BlazorApp1.Components;
+@using BlazorApp1.Models
+@using BlazorApp1.Models.Validation;
+@using BlazorApp1.Services;
+@using BlazorApp1.Views;
+@using Radzen;
+
+@inject ILoggerFactory LoggerFactory
+@inject Services.EmployeeService employeeService
+@inject Services.SkillService skillService
+@inject Services.OrderTypeService orderTypeService
+@inject RegionService regionService
+@inject Services.DaDataService dadataService
+@inject NavigationManager NavigationManager
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+

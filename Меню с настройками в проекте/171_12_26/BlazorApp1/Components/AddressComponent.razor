@@ -1,0 +1,158 @@
+﻿@using BlazorApp1.Models;
+@inject Services.DaDataService dadataService
+@inject NavigationManager navigationManager
+@inject ISnackbar Snackbar
+
+<link rel="stylesheet" href="_content/Radzen.Blazor/css/material-base.css">
+<div class="address">
+
+    <div class="row block_form justify-content-end">
+
+        <div class="choose_type_address align-self-end">Ввод вручную <MudSwitch Class="m0p0" @bind-Checked="@address.IsAutogen" Color="MudBlazor.Color.Primary" />Ввод автоматически</div>
+
+    </div>
+    <div class="row block_form">
+
+        @if (address.IsAutogen == true)
+        {
+            <div class="col-md-12">
+                <label class="small_input_label_creating">Адрес:</label>
+                <MudGrid>
+                    <MudItem xs="12">
+                        <MudAutocomplete Variant="Variant.Outlined" Margin=MudBlazor.Margin.Dense T="DaData.Models.Suggestions.Results.AddressResult" Clearable="true" OnClearButtonClick="ClearAddress"
+                                     @bind-Value="addressResult"
+                                     TextUpdateSuppression="false"
+                                     SearchFunc="@SearchAddress"
+                                     ToStringFunc="@(e=> e==null?null : $"{e.UnrestrictedValue}")" />
+                    </MudItem>
+                </MudGrid>
+            </div>
+        }
+        else
+        {
+            <div class="col-12 block_form">
+                <label class="small_input_label_creating">Страна:</label>
+                <input class="data_input_creating" @bind="address.Country" style="width:100%;" />
+            </div>
+            <div class="col-12 block_form">
+                <label class="small_input_label_creating">Область/Регион:</label>
+                <input class="data_input_creating" @bind="address.StateProvince" style="width:100%;" />
+            </div>
+            <div class="col-12 block_form">
+                <label class="small_input_label_creating">Город:</label>
+                <input class="data_input_creating" @bind="address.City" style="width:100%;" />
+            </div>
+            <div class="col-12 block_form">
+                <label class="small_input_label_creating">Населенный пункт(село поселок деревня микрорайон):</label>
+                <input class="data_input_creating" @bind="address.Settlement" style="width:100%;" />
+            </div>
+            <div class="col-12 block_form">
+                <label class="small_input_label_creating">Улица:</label>
+                <input class="data_input_creating" @bind="address.Street" style="width:100%;" />
+            </div>
+            <div class="col-12 block_form">
+                <label class="small_input_label_creating">Дом:</label>
+                <input class="data_input_creating" @bind="address.House" style="width:100%;" />
+            </div>
+            <div class="col-12 block_form">
+                <label class="small_input_label_creating">Почтовый индекс:</label>
+                <input class="data_input_creating" @bind="address.PostalCode" style="width:100%;" />
+            </div>
+            <div class="col-12 block_form">
+                <label class="small_input_label_creating">Широта(Lat):</label>
+                <input class="data_input_creating" @bind="address.Lat" style="width:100%;" />
+            </div>
+            <div class="col-12 block_form">
+                <label class="small_input_label_creating">Долгота(Lon):</label>
+                <input class="data_input_creating" @bind="address.Lon" style="width:100%;" />
+            </div>
+        }
+
+    </div>
+
+    <div class="row block_form">
+        <div class="col-md-4">
+            <label class="small_input_label_creating" style="white-space: nowrap; text-overflow: ellipsis;">Кв/офис:</label>
+            <input class="data_input_creating" @bind="address.Apartments" style="width:100%;" />
+        </div>
+        <div class="col-md-4">
+            <label class="small_input_label_creating">Этаж:</label>
+            <input class="data_input_creating" @bind="address.Floor" style="width:100%;" />
+        </div>
+        <div class="col-md-4">
+            <label class="small_input_label_creating">Подъезд:</label>
+            <input class="data_input_creating" @bind="address.Entrance" style="width:100%;" />
+        </div>
+    </div>
+    <div class="row block_form">
+        <div class="col-md-12">
+            <label class="small_input_label_creating">Описание адреса:</label>
+            <textarea class="data_input_creating" rows="1" @bind="address.Description" style="width:100%;"></textarea>
+        </div>
+    </div>
+
+</div>
+
+@code 
+{
+    //Для заполнения при переключения с ручного на автоматический
+    private void SetUnrestrictedValue()
+    {
+        _addressResult.UnrestrictedValue = address.FullAddress;
+    }
+
+    private Address _address = new();
+
+    [Parameter]
+    public Address? address 
+    {
+        get
+        {
+            return _address;
+        }
+        set
+        {
+            if (value != null)
+            {
+                _address = value;
+                _addressResult.UnrestrictedValue = address.FullAddress;
+            }
+            else
+            {
+                _addressResult = new();
+            }
+        }
+
+    }
+
+    private DaData.Models.Suggestions.Results.AddressResult _addressResult = new();
+    private DaData.Models.Suggestions.Results.AddressResult addressResult
+    {
+        get
+        {
+            return _addressResult;
+        }
+        set
+        {
+            _addressResult = value;
+            _address.SetDaDataValues(_addressResult);
+        }
+    }
+
+    private async Task<IEnumerable<DaData.Models.Suggestions.Results.AddressResult>> SearchAddress(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return null;
+        }
+
+        var response = await dadataService.GetAddress(value);
+
+        return response.Suggestions;
+    }
+    private void ClearAddress()
+    {
+        address = new Address();
+        addressResult = new();
+    }
+}

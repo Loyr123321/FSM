@@ -1,0 +1,663 @@
+﻿@page "/register"
+
+@using BlazorApp1.Auth;
+@using BlazorApp1.Models
+@using BlazorApp1.Services
+@using BlazorApp1.Utils;
+@using BlazorApp1.Views
+@using Microsoft.AspNetCore.Authentication;
+@using MudBlazor.Utilities
+@using Newtonsoft.Json;
+@using Radzen;
+@using System.Security.Claims;
+@inject ILoggerFactory LoggerFactory
+@inject Services.EmployeeService employeeService
+@inject Services.ClientService clientService
+@inject Services.SkillService skillService
+@inject Services.OrderTypeService orderTypeService
+@inject Services.OrderTemplateService orderTemplateService
+@inject DataListService dataListService
+@inject Services.OrderService orderService
+@inject Services.DaDataService dadataService
+@inject ISnackbar Snackbar
+@inject NavigationManager NavigationManager
+@inject Services.RabbitMQService rabbit
+@inject UserService userService
+@inject IHttpContextAccessor HttpContextAccessor
+@inject MailService mailService
+
+@*Залогинен с админ правами БезСсылкиРегистрации*@
+@if (authenticationStateTask.Result.User.Identity.IsAuthenticated && authenticationStateTask.Result.User.HasClaim(ClaimTypes.Role, "Admin") && string.IsNullOrEmpty(token))
+{
+    <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" @ref="tabs">
+        <MudTabPanel Text="Регистрация через почту">
+            <div class="row d-flex justify-content-center">
+                <div class="col-12 col-xs-12 col-md-6 col-lg-6 my_form">
+                    <h3>Регистрация</h3>
+                    <div class="row" style="margin-top: 10px;">
+
+                        <div class="col-md-12">
+                            <label>Фамилия:</label>
+                            <input class="@validationClassLastName" @bind="newUser.LastName" style="width:100%;" />
+                            @if (!string.IsNullOrEmpty(validationLastNameText))
+                            {
+                                <div class="my_validation_error_text">@validationLastNameText</div>
+                            }
+                        </div>
+                        <div class="col-md-12">
+                            <label>Имя:</label>
+                            <input class="@validationClassFirstName" @bind="newUser.FirstName" style="width:100%;" />
+                            @if (!string.IsNullOrEmpty(validationFirstNameText))
+                            {
+                                <div class="my_validation_error_text">@validationFirstNameText</div>
+                            }
+                        </div>
+                        <div class="col-md-12">
+                            <label>Отчество:</label>
+                            <input class="@validationClassMiddleName" @bind="newUser.MiddleName" style="width:100%;" />
+                            @if (!string.IsNullOrEmpty(validationMiddleNameText))
+                            {
+                                <div class="my_validation_error_text">@validationMiddleNameText</div>
+                            }
+                        </div>
+                        <div class="col-md-12">
+                            <label>Логин (Почта):</label>
+                            <input class="@validationClassLogin" @bind="newUser.Email" style="width:100%;" />
+                            @if (!string.IsNullOrEmpty(validationLoginText))
+                            {
+                                <div class="my_validation_error_text">@validationLoginText</div>
+                            }
+                        </div>
+
+                        <div class="col-md-12">
+                            <label>Роли:</label>
+                            <MudSelect T="string" Class="@validationClassRoles" Margin=MudBlazor.Margin.Dense Variant="MudBlazor.Variant.Outlined" MultiSelection="true" SelectAll="true" SelectAllText="Выбрать все"
+                                   @bind-Value="@selectedRole"
+                                   @bind-SelectedValues="selectedRoles">
+                                @foreach (var role in roles)
+                                {
+                                    <MudSelectItem Value="@role">@role</MudSelectItem>
+                                }
+                            </MudSelect>
+                            @if (!string.IsNullOrEmpty(validationRolesText))
+                            {
+                                <div class="my_validation_error_text">@validationRolesText</div>
+                            }
+                        </div>
+
+                        <div style="float: right; text-align: right;">
+                            <MudButton Disabled="@_processing" Variant="MudBlazor.Variant.Filled" Color="Color.Primary" OnClick="@(e=>CreateTokenUrl())">
+                                <MudText>Создать учетную запись</MudText>
+                            </MudButton>
+                        </div>
+
+                    </div>
+
+                </div>
+            </div>
+        </MudTabPanel>
+        <MudTabPanel Text="Регистрация с паролем">
+            <div class="row d-flex justify-content-center">
+                <div class="col-12 col-xs-12 col-md-6 col-lg-6 my_form">
+                    <h3>Регистрация</h3>
+                    <div class="row" style="margin-top: 10px;">
+
+                        <div class="col-md-12">
+                            <label>Фамилия:</label>
+                            <input class="@validationClassLastName" @bind="newUser.LastName" style="width:100%;" />
+                            @if (!string.IsNullOrEmpty(validationLastNameText))
+                            {
+                                <div class="my_validation_error_text">@validationLastNameText</div>
+                            }
+                        </div>
+                        <div class="col-md-12">
+                            <label>Имя:</label>
+                            <input class="@validationClassFirstName" @bind="newUser.FirstName" style="width:100%;" />
+                            @if (!string.IsNullOrEmpty(validationFirstNameText))
+                            {
+                                <div class="my_validation_error_text">@validationFirstNameText</div>
+                            }
+                        </div>
+                        <div class="col-md-12">
+                            <label>Отчество:</label>
+                            <input class="@validationClassMiddleName" @bind="newUser.MiddleName" style="width:100%;" />
+                            @if (!string.IsNullOrEmpty(validationMiddleNameText))
+                            {
+                                <div class="my_validation_error_text">@validationMiddleNameText</div>
+                            }
+                        </div>
+                        <div class="col-md-12">
+                            <label>Логин (Почта):</label>
+                            <input class="@validationClassLogin" @bind="newUser.Email" style="width:100%;" />
+                            @if (!string.IsNullOrEmpty(validationLoginText))
+                            {
+                                <div class="my_validation_error_text">@validationLoginText</div>
+                            }
+                        </div>
+
+
+
+                        <div class="col-md-12">
+                            <label>Пароль:</label>
+                            <input type="password" class="@validationClassPassword" @bind="newUser.Password" style="width:100%;" />
+                        </div>
+                        <div class="col-md-12">
+                            <label>Подтверждение пароля:</label>
+                            <input type="password" class="@validationClassPassword" @bind="newUser.ConfirmPassword" style="width:100%;" />
+                            @if (!string.IsNullOrEmpty(validationPasswordText))
+                            {
+                                <div class="my_validation_error_text">@validationPasswordText</div>
+                            }
+                        </div>
+
+
+
+                        <div class="col-md-12">
+                            <label>Роли:</label>
+                            <MudSelect T="string" Class="@validationClassRoles" Margin=MudBlazor.Margin.Dense Variant="MudBlazor.Variant.Outlined" MultiSelection="true" SelectAll="true" SelectAllText="Выбрать все"
+                                   @bind-Value="@selectedRole"
+                                   @bind-SelectedValues="selectedRoles">
+                                @foreach (var role in roles)
+                                {
+                                    <MudSelectItem Value="@role">@role</MudSelectItem>
+                                }
+                            </MudSelect>
+                            @if (!string.IsNullOrEmpty(validationRolesText))
+                            {
+                                <div class="my_validation_error_text">@validationRolesText</div>
+                            }
+                        </div>
+
+                        <div style="float: right; text-align: right;">
+                            <MudButton Disabled="@_processing" Variant="MudBlazor.Variant.Filled" Color="Color.Primary" OnClick="@(e=>Register())">
+                                <MudText>Создать учетную запись</MudText>
+                            </MudButton>
+                        </div>
+
+                    </div>
+
+                </div>
+            </div>
+        </MudTabPanel>
+    </MudTabs>
+}
+@*Передана ссылка*@
+else if (!string.IsNullOrEmpty(token))
+{
+    @if (!string.IsNullOrEmpty(newUser.Email))
+    {
+        @if (isPassReset == false)
+        {
+            <div class="row d-flex justify-content-center">
+                <div class="col-12 col-xs-12 col-md-6 col-lg-6 my_form">
+                    <h3>Регистрация</h3>
+                    <div class="row" style="margin-top: 10px;">
+
+                        <div class="col-md-12">
+                            <label>Фамилия:</label>
+                            <input class="@validationClassLastName" @bind="newUser.LastName" style="width:100%;" />
+                            @if (!string.IsNullOrEmpty(validationLastNameText))
+                            {
+                                <div class="my_validation_error_text">@validationLastNameText</div>
+                            }
+                        </div>
+                        <div class="col-md-12">
+                            <label>Имя:</label>
+                            <input class="@validationClassFirstName" @bind="newUser.FirstName" style="width:100%;" />
+                            @if (!string.IsNullOrEmpty(validationFirstNameText))
+                            {
+                                <div class="my_validation_error_text">@validationFirstNameText</div>
+                            }
+                        </div>
+                        <div class="col-md-12">
+                            <label>Отчество:</label>
+                            <input class="@validationClassMiddleName" @bind="newUser.MiddleName" style="width:100%;" />
+                            @if (!string.IsNullOrEmpty(validationMiddleNameText))
+                            {
+                                <div class="my_validation_error_text">@validationMiddleNameText</div>
+                            }
+                        </div>
+                        <div class="col-md-12">
+                            <label>Логин (Почта):</label>
+                            <input class="@validationClassLogin" @bind="newUser.Email" style="width:100%;" />
+                            @if (!string.IsNullOrEmpty(validationLoginText))
+                            {
+                                <div class="my_validation_error_text">@validationLoginText</div>
+                            }
+                        </div>
+
+
+
+                        <div class="col-md-12">
+                            <label>Пароль:</label>
+                            <input type="password" class="@validationClassPassword" @bind="newUser.Password" style="width:100%;" />
+                        </div>
+                        <div class="col-md-12">
+                            <label>Подтверждение пароля:</label>
+                            <input type="password" class="@validationClassPassword" @bind="newUser.ConfirmPassword" style="width:100%;" />
+                            @if (!string.IsNullOrEmpty(validationPasswordText))
+                            {
+                                <div class="my_validation_error_text">@validationPasswordText</div>
+                            }
+                        </div>
+
+                        <div style="float: right; text-align: right;">
+                            <MudButton Disabled="@_processing" Variant="MudBlazor.Variant.Filled" Color="Color.Primary" OnClick="@(e=>Register())">
+                                <MudText>Сохранить</MudText>
+                            </MudButton>
+                        </div>
+
+                    </div>
+
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="row d-flex justify-content-center">
+                <div class="col-12 col-xs-12 col-md-6 col-lg-6 my_form">
+                    <h3>Изменить пароль</h3>
+                    <div class="row" style="margin-top: 10px;">
+
+                        <div class="col-md-12">
+                            <label>Фамилия:</label>
+                            <input class="@validationClassLastName" @bind="newUser.LastName" style="width:100%;" disabled/>
+                            @if (!string.IsNullOrEmpty(validationLastNameText))
+                            {
+                                <div class="my_validation_error_text">@validationLastNameText</div>
+                            }
+                        </div>
+                        <div class="col-md-12">
+                            <label>Имя:</label>
+                            <input class="@validationClassFirstName" @bind="newUser.FirstName" style="width:100%;" disabled />
+                            @if (!string.IsNullOrEmpty(validationFirstNameText))
+                            {
+                                <div class="my_validation_error_text">@validationFirstNameText</div>
+                            }
+                        </div>
+                        <div class="col-md-12">
+                            <label>Отчество:</label>
+                            <input class="@validationClassMiddleName" @bind="newUser.MiddleName" style="width:100%;" disabled/>
+                            @if (!string.IsNullOrEmpty(validationMiddleNameText))
+                            {
+                                <div class="my_validation_error_text">@validationMiddleNameText</div>
+                            }
+                        </div>
+                        <div class="col-md-12">
+                            <label>Логин (Почта):</label>
+                            <input class="@validationClassLogin" @bind="newUser.Email" style="width:100%;" disabled />
+                            @if (!string.IsNullOrEmpty(validationLoginText))
+                            {
+                                <div class="my_validation_error_text">@validationLoginText</div>
+                            }
+                        </div>
+
+
+
+                        <div class="col-md-12">
+                            <label>Пароль:</label>
+                            <input type="password" class="@validationClassPassword" @bind="newUser.Password" style="width:100%;" />
+                        </div>
+                        <div class="col-md-12">
+                            <label>Подтверждение пароля:</label>
+                            <input type="password" class="@validationClassPassword" @bind="newUser.ConfirmPassword" style="width:100%;" />
+                            @if (!string.IsNullOrEmpty(validationPasswordText))
+                            {
+                                <div class="my_validation_error_text">@validationPasswordText</div>
+                            }
+                        </div>
+
+                        <div style="float: right; text-align: right;">
+                            <MudButton Disabled="@_processing" Variant="MudBlazor.Variant.Filled" Color="Color.Primary" OnClick="@(e=>ResetPass())">
+                                <MudText>Сохранить</MudText>
+                            </MudButton>
+                        </div>
+
+                    </div>
+
+                </div>
+            </div>
+        }
+
+    }
+    else
+    {
+        <BlazorApp1.Components.MyRedirectComponent URL="/login" ErrorCode="@errorCode.ToString()"></BlazorApp1.Components.MyRedirectComponent>
+    }
+
+}
+@*Без ссылки*@
+else
+{
+    <div>
+        Для регистрации нового пользователя вам потребуется войти в систему как Admin<br>
+        или получить ссылку для регистрации.
+    </div>
+}
+
+
+
+
+
+@code
+{
+    MudTabs tabs;
+
+    [Parameter]
+    [SupplyParameterFromQuery]
+    public string token { get; set; }
+
+    public bool isPassReset = false;
+
+    private bool _processing = false;
+    private User newUser = new();
+    public List<string> roles = new List<string> { "Dispatcher", "Admin" };
+    public string selectedRole;
+    public IEnumerable<string> selectedRoles = new HashSet<string>();
+
+    [CascadingParameter]
+    private Task<AuthenticationState> authenticationStateTask { get; set; }
+
+    //
+    private string validationFirstNameText = string.Empty;
+    private string validationClassFirstName = "form_input_plnd";
+    //
+    private string validationLastNameText = string.Empty;
+    private string validationClassLastName = "form_input_plnd";
+    //
+    private string validationMiddleNameText = string.Empty;
+    private string validationClassMiddleName = "form_input_plnd";
+    //
+    private string validationLoginText = string.Empty;
+    private string validationClassLogin = "form_input_plnd";
+    //
+    private string validationPasswordText = string.Empty;
+    private string validationClassPassword = "form_input_plnd";
+    //
+    private string validationRolesText = string.Empty;
+    private string validationClassRoles = "";
+    //
+    private List<string> Validation(bool withPass)
+    {
+        List<string> result = new();
+
+        //resetAll
+        validationFirstNameText = string.Empty;
+        validationClassFirstName = "form_input_plnd";
+        validationLastNameText = string.Empty;
+        validationClassLastName = "form_input_plnd";
+        validationMiddleNameText = string.Empty;
+        validationClassMiddleName = "form_input_plnd";
+        validationLoginText = string.Empty;
+        validationClassLogin = "form_input_plnd";
+        validationPasswordText = string.Empty;
+        validationClassPassword = "form_input_plnd";
+        //
+        validationClassRoles = "form_input_plnd";
+        validationRolesText = string.Empty;
+
+        if (string.IsNullOrEmpty(newUser.FirstName))
+        {
+            validationClassFirstName = "invalid form_input_plnd";
+            result.Add("Null FirstName");
+            validationFirstNameText = "Поле должно быть заполнено";
+        }
+        if (string.IsNullOrEmpty(newUser.LastName))
+        {
+            validationClassLastName = "invalid form_input_plnd";
+            result.Add("Null LastName");
+            validationLastNameText = "Поле должно быть заполнено";
+        }
+        //if (string.IsNullOrEmpty(newUser.MiddleName))
+        //{
+        //    validationClassMiddleName = "invalid form_input_plnd";
+        //    result.Add("Null MiddleName");
+        //    validationMiddleNameText = "Поле должно быть заполнено";
+        //}
+
+        if (string.IsNullOrEmpty(newUser.Email))
+        {
+            validationClassLogin = "invalid form_input_plnd";
+            result.Add("Null Login");
+            validationLoginText = "Поле должно быть заполнено";
+        }
+        else
+        {
+            if (newUser.Email.Count(x => x == '@') == 0 || newUser.Email.Count(x => x == '@') > 1)
+            {
+                validationClassLogin = "invalid form_input_plnd";
+                result.Add("Login Format is Invalid");
+                validationLoginText = "Неверный формат Электронной почты";
+            }
+        }
+
+        if (selectedRoles == null || selectedRoles.ToList().Count == 0)
+        {
+            validationClassRoles = "invalid";
+            result.Add("Roles not set");
+            validationRolesText = "Не заданы роли";
+        }
+
+        if (withPass == true)
+        {
+            if (string.IsNullOrEmpty(newUser.Password) || string.IsNullOrEmpty(newUser.ConfirmPassword))
+            {
+                validationClassPassword = "invalid form_input_plnd";
+                result.Add("Null Pass");
+                validationPasswordText = "Поля должны быть заполнены";
+            }
+            else
+            {
+                if (!newUser.Password.Equals(newUser.ConfirmPassword))
+                {
+                    validationClassPassword = "invalid form_input_plnd";
+                    result.Add("Passwords do not match");
+                    validationPasswordText = "Пароли не совпадают";
+                }
+            }
+
+            if (newUser.Password.Any(x => Char.IsWhiteSpace(x)))
+            {
+                validationClassPassword = "invalid form_input_plnd";
+                result.Add("Forbidden symbols");
+                validationPasswordText = "Пароль содержит запрещённые символы";
+            }
+        }
+
+
+
+        return result;
+    }
+
+    private async void CreateTokenUrl()
+    {
+        try
+        {
+            _processing = true; await Task.Delay(1);
+
+            newUser.Roles = selectedRoles.ToList();
+
+            var validation = Validation(withPass: false);
+            if (validation.Count > 0)
+                return;
+
+            var checkEmailDuplicates = userService.GetUserByEmail(newUser.Email);
+            if (checkEmailDuplicates != null)
+            {
+                ShowNotification(Severity.Warning, "Учетная запись с такой электронной почтой уже существует");
+                return;
+            }
+
+            string token = AuthOptions.CreateJWT(inputUser: newUser, AuthOptions.JWT_TYPE.Register);
+            string url = UploadPath.BaseUrl + "/register?token=" + token;
+            mailService.SendMail(To: newUser.Email, Subject: "FSM_Register", url);
+
+            ShowNotification(Severity.Normal, "Инструкция для регистрации отправлена на почту " + newUser.Email);
+            //userService.SaveOrUpdate(newUser);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("RegisterPage_CreateTokenUrl_exception " + ex.Message);
+            return;
+        }
+        finally
+        {
+            _processing = false;
+            StateHasChanged();
+        }
+    }
+
+    private async void ResetPass()
+    {
+        try
+        {
+            _processing = true; await Task.Delay(1);
+
+            var validation = Validation(withPass: true);
+            if (validation.Count > 0)
+                return;
+
+            var findedUser = userService.GetUserByEmail(newUser.Email);
+            if (findedUser == null)
+            {
+                ShowNotification(Severity.Error, "Невозможно сбросить пароль для данного пользователя");
+                return;
+            }
+
+            findedUser.Password = findedUser.GetHash(newUser.Password);
+            userService.SaveOrUpdate(findedUser);
+            ShowNotification(Severity.Success, $"Пароль успешно изменен");
+            //NavigationManager.NavigateTo("/login", true, true);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("RegisterPage_Register_exception " + ex.Message);
+            return;
+        }
+        finally
+        {
+            _processing = false;
+            StateHasChanged();
+        }
+    }
+    private async void Register()
+    {
+        try
+        {
+            _processing = true; await Task.Delay(1);
+
+            //Удалить пробелы из ФИО
+            if (!string.IsNullOrEmpty(newUser.FirstName))
+            {
+                newUser.FirstName = new string(newUser.FirstName.ToCharArray().Where(c => !Char.IsWhiteSpace(c)).ToArray());
+            }
+            if (!string.IsNullOrEmpty(newUser.LastName))
+            {
+                newUser.LastName = new string(newUser.LastName.ToCharArray().Where(c => !Char.IsWhiteSpace(c)).ToArray());
+            }
+            if (!string.IsNullOrEmpty(newUser.MiddleName))
+            {
+                newUser.MiddleName = new string(newUser.MiddleName.ToCharArray().Where(c => !Char.IsWhiteSpace(c)).ToArray());
+            }
+
+            //Удалить пробелы из логина(Почты)
+            if (!string.IsNullOrEmpty(newUser.Email))
+            {
+                newUser.Email = new string(newUser.Email.ToCharArray().Where(c => !Char.IsWhiteSpace(c)).ToArray());
+            }
+
+            var validation = Validation(withPass: true);
+            if (validation.Count > 0)
+                return;
+
+            var checkEmailDuplicates = userService.GetUserByEmail(newUser.Email);
+            if (checkEmailDuplicates != null)
+            {
+                ShowNotification(Severity.Warning, "Учетная запись с такой электронной почтой уже существует");
+                return;
+            }
+
+            newUser.Roles = selectedRoles.ToList();
+
+            newUser.Password = newUser.GetHash(newUser.Password);
+
+            userService.SaveOrUpdate(newUser);
+
+            ShowNotification(Severity.Success, $"Учетная запись {newUser.Email} успешно создана");
+            newUser.Password = string.Empty;
+            newUser.ConfirmPassword = string.Empty;
+        }
+        catch (MongoDB.Driver.MongoWriteException ex)
+        {
+            if (ex.WriteError.Category == MongoDB.Driver.ServerErrorCategory.DuplicateKey)
+            {
+                //для user с другим id
+                ShowNotification(Severity.Warning, "Учетная запись с такой электронной почтой уже существует");
+            }
+            return;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("RegisterPage_Register_exception " + ex.Message);
+            return;
+        }
+        finally
+        {
+            _processing = false;
+            StateHasChanged();
+        }
+    }
+
+    public int errorCode = 0;
+    private void SetUserFromToken()
+    {
+        var handler = new System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler();
+        var jwtSecurityToken = handler.ReadJwtToken(token);
+
+        if (jwtSecurityToken.ValidTo < DateTime.UtcNow)
+        {
+            //Token протух
+            ShowNotification(Severity.Warning, "Просрочено время регистрации");
+            errorCode = 3;
+            return;
+        }
+
+        //var jti = jwtSecurityToken.Claims.First(claim => claim.Type == "jti").Value;
+
+        var claims = jwtSecurityToken.Claims.ToList();
+        var claimRoles = claims.FindAll(claim => claim.Type == "http://schemas.microsoft.com/ws/2008/06/identity/claims/role");
+        List<string> roles = new();
+        foreach (var claimRole in claimRoles)
+        {
+            roles.Add(claimRole.Value);
+        }
+
+        User? tokenUser = JsonConvert.DeserializeObject<User>(jwtSecurityToken.Claims.First(claim => claim.Type == "user").Value);
+        if (tokenUser != null)
+        {
+            newUser = tokenUser;
+            selectedRoles = newUser.Roles;
+        }
+
+        if (jwtSecurityToken.Subject == AuthOptions.JWT_TYPE.RegisterResetPass.ToString())
+        {
+            isPassReset = true;
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!string.IsNullOrEmpty(token))
+        {
+            SetUserFromToken();
+        }
+
+        StateHasChanged();
+    }
+
+    private void ShowNotification(Severity severity, string text)
+    {
+        Snackbar.Clear();
+        Snackbar.Add(text, severity);
+    }
+}

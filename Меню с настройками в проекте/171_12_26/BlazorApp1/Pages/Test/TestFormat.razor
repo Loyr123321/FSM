@@ -1,0 +1,75 @@
+﻿@page "/test_format"
+
+@using BlazorApp1.Components
+@using BlazorApp1.Models
+@using BlazorApp1.Models.Validation;
+@using BlazorApp1.Services
+@using Blazored.Modal
+@using Blazored.Modal.Services
+
+@inject Services.ClientService clientService
+@inject Services.DaDataService dadataService
+@inject NavigationManager navigationManager
+@inject ISnackbar Snackbar
+@inject ILoggerFactory LoggerFactory
+@inject IDialogService DialogService
+
+@inject Services.GeneralGridSettingsService service
+@inject Services.UserGridSettingsService service2
+
+<div style="background-color: pink; width: 200px; height: 200px;" @onclick="(e=>TT())">
+    Общий формат
+</div>
+
+<div style="background-color: beige; width: 200px; height: 200px;" @onclick="(e=>TT2())">
+    Общий формат(Дефолт)
+</div>
+
+
+<div style="background-color: pink; width: 200px; height: 200px;" @onclick="(e=>TT3())">
+    Формат Юзера
+</div>
+
+<div style="background-color: beige; width: 200px; height: 200px;" @onclick="(e=>TT4())">
+    Формат Юзера(Основной)
+</div>
+
+@code
+{
+    private void TT()
+    {
+        //var setting = new GeneralGridSettings(false);
+        //setting.TemplateId = "test1";
+
+        //service.SaveOrUpdate(setting);
+    }
+
+    private void TT2()
+    {
+        //var setting = new GeneralGridSettings(true);
+        //setting.TemplateId = "test1";
+
+        //service.SaveOrUpdate(setting);
+    }
+
+
+    private void TT3()
+    {
+        var setting = new UserGridSettings();
+        setting.TemplateId = "test1";
+        setting.UserId = "vasya";
+        setting.IsMain = false;
+
+        service2.SaveOrUpdate(setting);
+    }
+
+    private void TT4()
+    {
+        var setting = new UserGridSettings();
+        setting.TemplateId = "test1";
+        setting.UserId = "vasya";
+        setting.IsMain = true;
+
+        service2.SaveOrUpdate(setting);
+    }
+}

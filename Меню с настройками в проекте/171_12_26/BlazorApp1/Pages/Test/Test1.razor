@@ -1,0 +1,214 @@
+﻿@page "/test1"
+@using BlazorApp1.Components;
+@using BlazorApp1.Models
+@using BlazorApp1.Services
+@using BlazorApp1.Views
+@using Microsoft.AspNetCore.Authentication;
+@using MudBlazor.Utilities
+@using System.Security.Claims;
+@using Radzen
+
+@using Microsoft.JSInterop
+@using System.Text.Json
+
+@inject ILoggerFactory LoggerFactory
+@inject DataListService dataListService
+@inject Services.OrderService orderService
+@inject Services.DaDataService dadataService
+
+@inject Services.EmployeeService employeeService
+@inject Services.SkillService skillService
+
+@inject ISnackbar Snackbar
+@inject NavigationManager NavigationManager
+@inject Services.RabbitMQService rabbit
+@inject IHttpContextAccessor HttpContextAccessor
+@inject RegionService regionService
+
+@inject Services.UserGridSettingsService settingsService;
+
+@inject TestService testService;
+
+<link rel="stylesheet" href="_content/Radzen.Blazor/css/material-base.css">
+
+@inject IJSRuntime JSRuntime
+@inject NavigationManager NavigationManager
+@inject NavigationManager navigationManager
+
+<RadzenButton Click="@(args => SaveSettings())" Text="SAVE" Style="margin-bottom: 16px" />
+<RadzenButton Click="@(args => _settings = null)" Text="LOAD" Style="margin-bottom: 16px" />
+
+<RadzenButton Click="@(args => _settings = null)" Text="CLEAR" Style="margin-bottom: 16px" />
+
+<RadzenButton Click="@(args => NavigationManager.NavigateTo("/datagrid-save-settings", true))" Text="Reload" Style="margin-bottom: 16px" />
+
+<RadzenDataGrid 
+    @ref=grid
+    @bind-Settings="@_settings"
+    AllowFiltering="true" 
+    AllowColumnPicking="true" 
+    AllowGrouping="true"
+    AllowPaging="true"
+    PageSize="4"
+    AllowSorting="true" 
+    AllowMultiColumnSorting="true" 
+    ShowMultiColumnSortingIndex="true"
+                AllowColumnResize="true"
+                AllowColumnReorder="true"
+                ColumnWidth="200px"
+                FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                Data="@employees"
+                IsLoading=@isLoading 
+                Count="@count" 
+                LoadData=@LoadData
+                TItem="Employee">
+
+    <Columns>
+        <RadzenDataGridColumn TItem="Employee" Property="Photo" Title="Employee" Sortable="false" Filterable="false">
+
+            <Template Context="data">
+                <RadzenImage Path="@data.Login" style="width: 40px; height: 40px; border-radius: 8px; margin-right: 8px;" />
+                @data.FirstName @data.LastName
+            </Template>
+
+
+        </RadzenDataGridColumn>
+        <RadzenDataGridColumn TItem="Employee" Property="Title" Title="Title" />
+        <RadzenDataGridColumn TItem="Employee" Property="EmployeeID" Title="Employee ID" />
+        <RadzenDataGridColumn TItem="Employee" Property="HireDate" Title="Hire Date" FormatString="{0:d}" />
+        <RadzenDataGridColumn TItem="Employee" Property="City" Title="City" />
+        <RadzenDataGridColumn TItem="Employee" Property="Country" Title="Country" />
+    </Columns>
+</RadzenDataGrid>
+
+
+@code {
+    RadzenDataGrid<Employee> grid;
+    IEnumerable<Employee> employees;
+
+    int count;
+    bool isLoading = false;
+    bool loaded;
+    async Task LoadData(LoadDataArgs args)
+    {
+        isLoading = true;
+
+        await Task.Yield();
+
+        var query = employeeService.GetAll();
+
+        count = query.Count();
+
+        // Simulate async data loading
+        await Task.Delay(2000);
+
+        employees = await Task.FromResult(query.Skip(args.Skip.Value).Take(args.Top.Value).ToList());
+
+        isLoading = false;
+
+        loaded = true;
+    }
+
+    private DataGridSettings _settings;
+    //DataGridSettings _settings;
+    //public DataGridSettings Settings
+    //{
+    //    get
+    //    {
+    //        return _settings;
+    //    }
+    //    set
+    //    {
+    //        if (_settings != value)
+    //        {
+    //            Console.Beep(100, 100);
+    //            Console.Beep(1000, 1000);
+    //            _settings = value;
+    //            InvokeAsync(SaveStateAsync);
+    //        }
+    //    }
+    //}
+
+    private async Task LoadStateAsync()
+    {
+        var result = await JSRuntime.InvokeAsync<string>("window.localStorage.getItem", "SettingsLoadData");
+        if (!string.IsNullOrEmpty(result))
+        {
+            _settings = JsonSerializer.Deserialize<DataGridSettings>(result);
+        }
+    }
+
+    private async Task SaveStateAsync()
+    {
+        await JSRuntime.InvokeVoidAsync("eval", $@"window.localStorage.setItem('SettingsLoadData', '{JsonSerializer.Serialize<DataGridSettings>(_settings)}')");
+    }
+
+    //protected override async Task OnAfterRenderAsync(bool firstRender)
+    //{
+    //    if (firstRender || loaded)
+    //    {
+    //        await LoadStateAsync();
+
+    //        if (loaded)
+    //        {
+    //            await Task.Yield();
+    //            await grid.Reload();
+    //            loaded = false;
+    //        }
+    //    }
+    //}
+}
+
+
+
+@code
+{
+    [CascadingParameter]
+    private Task<AuthenticationState> authenticationStateTask { get; set; }
+
+    private string currentUrl = string.Empty;
+    public void SetCurrentUrl()
+    {
+        currentUrl = navigationManager.Uri;
+        currentUrl = currentUrl.Replace(navigationManager.BaseUri, string.Empty);
+        if (currentUrl.Contains(@"/"))
+        {
+            var items = currentUrl.Split('/');
+            currentUrl = items[0];
+        }
+        else if (currentUrl.Contains(@"?"))
+        {
+            var items = currentUrl.Split('?');
+            currentUrl = items[0];
+        }
+    }
+
+    private void SaveSettings()
+    {
+        string obj = JsonSerializer.Serialize<DataGridSettings>(_settings);
+
+        var userId = authenticationStateTask.Result.User.Claims.FirstOrDefault(c => c.Type == "UserId").Value;
+
+        ////var setting = new UserGridSettings();
+        ////setting.UserId = userId;
+        ////setting.Url = currentUrl;
+        ////setting.GridTemplate = "MY_TEMPLATE";
+        ////setting.GridSettings = obj;
+
+        //settingsService.SaveOrUpdate(setting);
+    }
+
+    private void GetEmployees()
+    {
+        employees = employeeService.GetAll();
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        SetCurrentUrl();
+        GetEmployees();
+        await base.OnInitializedAsync();
+    }
+
+}
+

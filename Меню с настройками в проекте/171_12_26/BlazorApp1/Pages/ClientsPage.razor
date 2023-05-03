@@ -1,0 +1,271 @@
+﻿@page "/clients"
+@attribute [Authorize(Policy = "RequireRole")]
+@using BlazorApp1.Models
+@using BlazorApp1.Services
+@using BlazorApp1.Views
+@using MudBlazor.Utilities
+@using Radzen;
+@inject ILoggerFactory LoggerFactory
+@inject Services.ClientService clientService
+
+@inject ISnackbar Snackbar
+@inject NavigationManager NavigationManager
+
+<link rel="stylesheet" href="_content/Radzen.Blazor/css/material-base.css">
+
+<div class="row">
+    <div class="col-12 col-md-6 col-sm-12 align-self-center">
+        <h5 class="page_header_text"> Клиенты</h5>
+    </div>
+    <div class="col-12 col-md-6 col-sm-12 align-self-center">
+        <RadzenMenu class="dropdown_export_button">
+            <RadzenMenuItem Text="Выгрузить в Excel" Icon="description">
+                <button class="button_export_page_xls" @onclick="@(args => Export(isOnlyPage: true))">Экспорт страницы XLS</button>
+                <button class="button_export_page_xls" @onclick="@(args => Export(isOnlyPage: false))">Экспорт всех страниц XLS</button>
+            </RadzenMenuItem>
+        </RadzenMenu>
+    </div>
+    <div class="col-12" style="margin-bottom:15px">
+        <MudButton Class="button_add_to_data" OnClick='() => NavigationManager.NavigateTo("/client")'>
+            <MudText Class="button_add_to_data_text">Новый клиент</MudText>
+        </MudButton>
+    </div>
+
+    <div class="col-12">
+
+        <RadzenDataGrid Data="@clients" TItem="Client"
+                        Density="Density.Compact"
+                        GridLines="DataGridGridLines.Both"
+                        AllowAlternatingRows="false"
+                        PagerHorizontalAlign="HorizontalAlign.Right"
+                        AllowPaging="true"
+                        PageNumbersCount="3"
+                        PageSize="25"
+                        PageSizeOptions="new int[] { 25, 50, 100, 250 }"
+                        ShowPagingSummary="true"
+                        FilterMode="FilterMode.Simple"
+                        LogicalFilterOperator="LogicalFilterOperator.Or"
+                        AllowFiltering="true"
+                        AllowColumnPicking="false"
+                        ColumnsShowingText="столбцов выбрано"
+                        ColumnsText="Столбцы"
+                        AllowSorting="true"
+                        class="gridTable"
+                        ColumnWidth="300px"
+                        AllowColumnResize="true"
+                        ColumnResized=@OnColumnResized
+                        PagingSummaryFormat=@pagingSummaryFormat
+                        PageSizeText="элементов на странице"
+                        RowRender="RowRender"
+                        EmptyText="Клиенты не найдены"
+                        RowClick="RowEvent"
+                        @ref="grid">
+            <Columns>
+                <!---->
+
+                <RadzenDataGridColumn TItem="Client" Title="Клиент" HeaderCssClass="header_table" Sortable="true" SortProperty="LastName" Filterable="true">
+                    <FilterTemplate>
+                        <RadzenTextBox @bind-Value="@filterName" Change=@FilterRecords Style="width:100%;" Class="w-100" />
+                    </FilterTemplate>
+
+                    <Template Context="context">
+                        @if (!string.IsNullOrEmpty(context.GetFullName()))
+                        {
+                            <a href="/client?id=@context.Id" style="text-decoration: none;">
+                                <div class="table_font" style="white-space:pre-wrap">@context.GetFullName()</div>
+                            </a>
+                        }
+                    </Template>
+                </RadzenDataGridColumn>
+
+                <RadzenDataGridColumn TItem="Client" Title="Контакты" HeaderCssClass="header_table" Sortable="false" Filterable="true">
+                    <FilterTemplate>
+                        <RadzenTextBox @bind-Value="@filterContact" Change=@FilterRecords Style="width:100%;" Class="w-100" />
+                    </FilterTemplate>
+
+                    <Template Context="context">
+                        @if (!string.IsNullOrEmpty(context.ClientPhone))
+                        {
+                            <a href="/client?id=@context.Id" style="text-decoration: none;">
+                                <div class="table_font" style="white-space:pre-wrap">@context.ClientPhone</div>
+                            </a>
+                        }
+                        @if (context.Contacts != null && context.Contacts.Count > 0)
+                        {
+                            foreach (var contact in context.Contacts)
+                            {
+                                if (!string.IsNullOrEmpty(contact.Phone))
+                                {
+                                    <a href="/client?id=@context.Id" style="text-decoration: none;">
+                                        <div class="table_font" style="white-space:pre-wrap">@contact.Phone</div>
+                                    </a>
+                                }
+                            }
+                        }
+                    </Template>
+                </RadzenDataGridColumn>
+
+                <RadzenDataGridColumn TItem="Client" Title="Тип" Sortable="true" HeaderCssClass="header_table" SortProperty="ClientType.TypeName" Filterable="true">
+                    <FilterTemplate>
+                        <RadzenTextBox @bind-Value="@filterType" Change=@FilterRecords Style="width:100%;" Class="w-100" />
+                    </FilterTemplate>
+
+                    <Template Context="context">
+                        @if (context.ClientType != null && !string.IsNullOrEmpty(context.ClientType.TypeName))
+                        {
+                            <a href="/client?id=@context.Id" style="text-decoration: none;">
+                                <div class="table_font" style="white-space:pre-wrap">@context.ClientType.TypeName</div>
+                            </a>
+                        }
+                    </Template>
+                </RadzenDataGridColumn>
+
+
+            </Columns>
+        </RadzenDataGrid>
+    </div>
+</div>
+
+
+
+
+@code
+{
+
+
+
+    private string? filterName;
+    private string? filterContact;
+    private string? filterType;
+    private void FilterRecords(object value)
+    {
+        clients.Clear();
+        clients.AddRange(allClients);
+
+        //Фильтрация по имени
+        if (!string.IsNullOrEmpty(filterName))
+        {
+            clients = clients.Where(x => !string.IsNullOrEmpty(x.GetFullName()) && x.GetFullName().ToLower().Contains(filterName.ToLower())).ToList();
+        }
+        //Фильтрация по Телефону и Телефону Контакта
+        if (!string.IsNullOrEmpty(filterContact))
+        {
+            HashSet<Client> resultList = new();
+            foreach (var oneClient in clients)
+            {
+                if (!string.IsNullOrEmpty(oneClient.ClientPhone) && oneClient.ClientPhone.ToLower().Contains(filterContact.ToLower()))
+                {
+                    resultList.Add(oneClient);
+                }
+
+                if (oneClient.Contacts != null && oneClient.Contacts.Count > 0)
+                {
+                    foreach (var contact in oneClient.Contacts)
+                    {
+                        if (!string.IsNullOrEmpty(contact.Phone) && contact.Phone.ToLower().Contains(filterContact.ToLower()))
+                        {
+                            resultList.Add(oneClient);
+                        }
+                    }
+                }
+            }
+            clients = clients.Intersect(resultList).ToList();
+        }
+        if (!string.IsNullOrEmpty(filterType))
+        {
+            clients = clients.Where(x => !string.IsNullOrEmpty(x.ClientType.TypeName) && x.ClientType.TypeName.ToLower().Contains(filterType.ToLower())).ToList();
+        }
+
+        clients = clients.ToList(); //Update Table if filters == null
+    }
+
+    public void Debug()
+    {
+
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        GetClients();
+    }
+
+    public List<Client> allClients = new List<Client>();
+    public List<Client> clients = new List<Client>();
+    private void GetClients()
+    {
+        allClients = clientService.GetAll().OrderBy(x => x.LastName).ToList();
+        clients = clientService.GetAll().OrderBy(x => x.LastName).ToList();
+    }
+
+    private void RowRender(RowRenderEventArgs<Client> args)
+    {
+        //args.Attributes.Add("class", "STATUS_" + args.Data.OrderStatus.StatusCode);
+        args.Attributes.Add("class", "focused_on_row");
+    }
+    private void OnColumnResized(DataGridColumnResizedEventArgs<Client> args)
+    {
+        //console.Log($"Resized {args.Column.Title} to {args.Width} pixels");
+    }
+
+    RadzenDataGrid<Client> grid;
+    //IList<Client> selectedClients;
+
+    public void Export(bool isOnlyPage)
+    {
+        try
+        {
+            var columns = grid.ColumnsCollection;
+            HashSet<string> headers = new();
+            foreach (var column in columns)
+            {
+                headers.Add(column.Title);
+            }
+
+            //Записи только активной на странице
+            if (isOnlyPage == true)
+            {
+                var currentPage = grid.CurrentPage;
+                var pageSize = grid.PageSize; //Кол-во записей на странице
+                                              //var pagesCount = grid.PageNumbersCount; //Кол-во страниц
+
+                List<Client> list = new();
+                int start = currentPage * pageSize;
+                int end = (currentPage * pageSize) + pageSize;
+                for (int i = start; i < end; i++)
+                {
+                    try
+                    {
+                        list.Add(clients[i]);
+                    }
+                    catch { }
+                }
+                var url = Utils.ExcelUtils.Clients("Лист1", headers.ToList(), list);
+                NavigationManager.NavigateTo("/TempDir/" + url, true, true);
+            }
+            else
+            {
+                var url = Utils.ExcelUtils.Clients("Лист1", headers.ToList(), clients);
+                NavigationManager.NavigateTo("/TempDir/" + url, true, true);
+            }
+        }
+        catch (Exception ex)
+        {
+            ShowNotification(Severity.Warning, "Неизвестная ошибка экспорта в Excel");
+            Console.WriteLine("ClientsPage_Export_Exception: " + ex.Message);
+        }
+
+    }
+
+    private void ShowNotification(Severity severity, string text)
+    {
+        Snackbar.Clear();
+        Snackbar.Add(text, severity);
+    }
+    string pagingSummaryFormat = "Страница {0} из {1} (всего {2} записи/-ей)";
+    private void RowEvent(DataGridRowMouseEventArgs<Client> args)
+    {
+        var test = args.Data.Id;
+        NavigationManager.NavigateTo($"/client?id={test}");
+    }
+
+}
